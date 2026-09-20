@@ -1,32 +1,216 @@
-# React + TypeScript + Vite
+# 🇮🇳 JanSetu
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+### AI-Powered Citizen Infrastructure Request & Decision Support Platform
 
-Currently, two official plugins are available:
+JanSetu is a multilingual digital platform designed to connect **citizens with government decision-makers** by collecting infrastructure-related requests and transforming citizen feedback into meaningful insights.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The platform uses **AI, demographic data, infrastructure indicators, and citizen requests** to identify demand hotspots and help policymakers prioritize infrastructure projects.
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🚀 Key Features
 
-## Expanding the Oxlint configuration
+### 👤 Citizen Portal
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+* Secure citizen login
+* Submit infrastructure requests and complaints
+* Submit requests using **text or voice**
+* Track submitted requests
+* View request status and updates
+* Multilingual support
+* View nearby and relevant infrastructure information
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+### 🏛️ Government Dashboard
+
+* Government employee login
+* Overview of citizen requests
+* Request management and monitoring
+* **Demand hotspot analysis**
+* Region-wise request analysis
+* AI-powered project recommendations
+* Infrastructure priority insights
+* Project monitoring
+* Impact analysis
+* Data source management
+
+### 🤖 AI-Powered Analysis
+
+JanSetu analyzes citizen feedback and infrastructure-related data to help identify:
+
+* High-demand regions
+* Infrastructure gaps
+* Priority areas
+* Recurring citizen needs
+* Potential infrastructure projects
+
+The AI insights are designed to **support government decision-making**, while final decisions remain with authorized policymakers.
+
+---
+
+## 🔄 How JanSetu Works
+
+```text
+Citizen
+   ↓
+Submit Request
+(Text / Voice)
+   ↓
+JanSetu Platform
+   ↓
+Data Processing & Analysis
+   ↓
+AI Analysis
+   ↓
+Demand Hotspots
+   ↓
+Priority Recommendations
+   ↓
+Government Dashboard
+   ↓
+Infrastructure Planning
+   ↓
+Project Implementation
+   ↓
+Impact Monitoring
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+
+* React
+* TypeScript
+* Vite
+* Tailwind CSS
+* React Router
+
+### Backend
+
+* Node.js
+* Express.js
+* REST APIs
+
+### Database & Services
+
+* Supabase
+* Authentication
+* Database
+* Data storage
+
+### AI
+
+* Generative AI
+* Natural Language Processing
+* Citizen feedback analysis
+* Recommendation system
+
+---
+
+## 📂 Project Structure
+
+```text
+JanSetu/
+│
+├── public/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   │   ├── citizen/
+│   │   └── government/
+│   ├── layouts/
+│   ├── services/
+│   ├── assets/
+│   └── App.tsx
+│
+├── package.json
+├── vite.config.ts
+├── tsconfig.json
+└── README.md
+```
+
+---
+
+## 💻 Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/HimaniPanigrahy286/JanSetu.git
+```
+
+### 2. Navigate to the project
+
+```bash
+cd JanSetu
+```
+
+### 3. Install dependencies
+
+```bash
+npm install
+```
+
+### 4. Start the development server
+
+```bash
+npm run dev
+```
+
+The application will be available at the local URL shown in your terminal, usually:
+
+```text
+http://localhost:5173
+```
+
+---
+
+## 👥 Team — NextGen Builders
+
+| Role                    | Member   |
+| ----------------------- | -------- |
+| 🎨 Frontend Development | Ankita   |
+| ⚙️ Backend Development  | Himani   |
+| 🤖 AI Development       | Trishala |
+
+### Team
+
+**NextGen Builders**
+
+A student developer team building technology-driven solutions for real-world public infrastructure challenges.
+
+---
+
+## 🎯 Project Objective
+
+The objective of JanSetu is to create a scalable digital public infrastructure platform that can:
+
+* Give citizens a simple way to communicate their infrastructure needs
+* Convert citizen feedback into structured data
+* Identify infrastructure demand hotspots
+* Provide AI-assisted recommendations
+* Help policymakers understand regional infrastructure requirements
+* Improve transparency and citizen participation
+
+---
+
+## 🌍 Vision
+
+> **Connecting citizens, data, and decision-makers to build better infrastructure.**
+
+JanSetu aims to make infrastructure planning more **citizen-centric, data-driven, inclusive, and transparent**.
+
+---
+
+## 📌 Project Status
+
+🚧 **Currently under development**
+
+This project is being developed as part of a student innovation/hackathon project.
+
+---
+
+## 📜 License
+
+This project is intended for educational, innovation, and hackathon purposes.
