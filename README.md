@@ -1,4 +1,4 @@
-# 🇮🇳 JanSetu
+#  JanSetu
 
 ### AI-Powered Citizen Infrastructure Request & Decision Support Platform
 
