@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Building2,
-  Shield,
-  User,
-  Eye,
-  EyeOff,
-  AlertCircle
-} from 'lucide-react';
 import { authService } from '../services/authService';
 import type { Role } from '../types';
 
+const EyeIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+  </svg>
+);
+const EyeOffIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+  </svg>
+);
+
 export default function LoginPage() {
   const navigate = useNavigate();
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>('citizen');
@@ -23,274 +26,186 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setError('');
+    if (!email.trim()) { setError('Email is required.'); return; }
+    if (!password.trim()) { setError('Password is required.'); return; }
     setLoading(true);
-
-    // Small loading delay for better UI
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
+    await new Promise((r) => setTimeout(r, 800));
     const user = authService.login(email, password, role);
-
     setLoading(false);
-
     if (user) {
-      if (role === 'citizen') {
-        navigate('/citizen/dashboard');
-      } else {
-        navigate('/government/overview');
-      }
+      if (role === 'citizen') navigate('/citizen/dashboard');
+      else navigate('/government/overview');
     } else {
-      setError(
-        'Invalid credentials. Please use one of the demo accounts below.'
-      );
+      setError('Invalid credentials. Use the demo accounts below.');
     }
   };
 
   const fillDemo = (demoRole: Role) => {
     setRole(demoRole);
-
-    if (demoRole === 'citizen') {
-      setEmail('citizen@demo.com');
-    } else {
-      setEmail('official@demo.com');
-    }
-
+    setEmail(demoRole === 'citizen' ? 'citizen@demo.com' : 'official@demo.com');
     setPassword('demo1234');
     setError('');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-brand-yellow flex flex-col font-body">
+      {/* Header */}
+      <header className="h-20 bg-brand-yellow border-b-2 border-black flex items-center justify-between px-6 md:px-12">
+        <button onClick={() => navigate('/')} className="flex items-center gap-3 cursor-pointer">
+          <div className="w-10 h-10 bg-black flex items-center justify-center border-2 border-black">
+            <svg className="w-6 h-6 fill-brand-yellow" viewBox="0 0 24 24">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+          </div>
+          <div className="flex flex-col">
+            <span className="font-heading font-extrabold text-xl tracking-tight leading-none">JANSETU</span>
+            <span className="font-body text-xs font-bold tracking-wider text-black">BRICS PLATFORM</span>
+          </div>
+        </button>
+        <button onClick={() => navigate('/register')} className="btn-brutal-secondary px-5 py-2 text-sm rounded-xl font-bold">
+          Register &rarr;
+        </button>
+      </header>
 
-      {/* Background Pattern */}
-      <div
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}
-      />
-
-      <div className="w-full max-w-md relative">
-
-        {/* Header */}
-        <div className="text-center mb-8">
-
-          <div className="flex items-center justify-center mb-4">
-            <div className="bg-blue-500 rounded-2xl p-3 shadow-lg shadow-blue-500/30">
-              <Building2 className="text-white" size={32} />
-            </div>
+      {/* Main */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-md">
+          {/* Title */}
+          <div className="mb-8 text-center">
+            <h1 className="font-heading font-extrabold text-4xl md:text-5xl tracking-tight">ACCESS PORTAL</h1>
+            <p className="font-medium text-sm mt-2 text-black/70">Sign in to your JanSetu account</p>
           </div>
 
-          <h1 className="text-3xl font-bold text-white">
-            NexGen Governance
-          </h1>
-
-          <p className="text-blue-300 mt-1 text-sm">
-            AI-Powered Digital Public Infrastructure Platform
-          </p>
-
-          <div className="flex items-center justify-center gap-2 mt-2">
-            <span className="text-xs text-blue-400/70 bg-blue-900/30 px-2 py-0.5 rounded-full border border-blue-700/30">
-              Google Code for Communities 2nd Edition • Track 1
-            </span>
-          </div>
-        </div>
-
-        {/* Login Card */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20 shadow-2xl">
-
-          <h2 className="text-xl font-semibold text-white mb-6">
-            Sign in to your account
-          </h2>
-
-          {/* Role Selection */}
-          <div className="flex gap-2 mb-6 bg-white/10 p-1 rounded-xl">
-
-            <button
-              type="button"
-              onClick={() => fillDemo('citizen')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                role === 'citizen'
-                  ? 'bg-blue-500 text-white shadow-lg'
-                  : 'text-blue-200 hover:text-white'
-              }`}
-            >
-              <User size={15} />
-              Citizen
-            </button>
-
-            <button
-              type="button"
-              onClick={() => fillDemo('official')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                role === 'official'
-                  ? 'bg-blue-500 text-white shadow-lg'
-                  : 'text-blue-200 hover:text-white'
-              }`}
-            >
-              <Shield size={15} />
-              Government Official
-            </button>
-
-          </div>
-
-          {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-4">
-
-            {/* Email */}
+          {/* Card */}
+          <div className="bg-white card-brutal-lg rounded-2xl p-8 space-y-6">
+            {/* Role Toggle */}
             <div>
-              <label className="block text-sm font-medium text-blue-200 mb-1.5">
-                Email Address
-              </label>
-
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={
-                  role === 'citizen'
-                    ? 'citizen@demo.com'
-                    : 'official@demo.com'
-                }
-                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all"
-                required
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-blue-200 mb-1.5">
-                Password
-              </label>
-
-              <div className="relative">
-
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
-                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all pr-12"
-                  required
-                />
-
+              <p className="font-bold text-xs uppercase tracking-widest mb-3">Select Your Role</p>
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                  onClick={() => { setRole('citizen'); setError(''); }}
+                  className={`py-3 px-4 rounded-xl border-2 font-bold text-sm transition-all ${
+                    role === 'citizen'
+                      ? 'bg-brand-yellow border-black shadow-brutal-sm'
+                      : 'bg-white border-black/30 hover:border-black'
+                  }`}
                 >
-                  {showPassword ? (
-                    <EyeOff size={18} />
-                  ) : (
-                    <Eye size={18} />
-                  )}
+                  👤 Citizen
                 </button>
-
+                <button
+                  type="button"
+                  onClick={() => { setRole('official'); setError(''); }}
+                  className={`py-3 px-4 rounded-xl border-2 font-bold text-sm transition-all ${
+                    role === 'official'
+                      ? 'bg-brand-yellow border-black shadow-brutal-sm'
+                      : 'bg-white border-black/30 hover:border-black'
+                  }`}
+                >
+                  🏛️ Government Official
+                </button>
               </div>
             </div>
 
-            {/* Error */}
-            {error && (
-              <div className="flex items-center gap-2 text-red-300 bg-red-900/30 border border-red-700/30 rounded-xl px-4 py-3 text-sm">
-                <AlertCircle size={16} className="shrink-0" />
-                {error}
+            <form onSubmit={handleLogin} className="space-y-4" noValidate>
+              {/* Email */}
+              <div>
+                <label className="font-bold text-xs uppercase tracking-widest block mb-1.5">Email Address</label>
+                <input
+                  id="login-email"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full border-2 border-black rounded-xl px-4 py-3 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1"
+                  autoComplete="email"
+                />
               </div>
-            )}
 
-            {/* Sign In Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-500 hover:bg-blue-400 disabled:bg-blue-600/50 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <svg
-                    className="animate-spin h-4 w-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
+              {/* Password */}
+              <div>
+                <label className="font-bold text-xs uppercase tracking-widest block mb-1.5">Password</label>
+                <div className="relative">
+                  <input
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="w-full border-2 border-black rounded-xl px-4 py-3 pr-12 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1"
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black transition-colors"
                   >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
+                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  </button>
+                </div>
+              </div>
 
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-
-                  Authenticating...
-                </>
-              ) : (
-                'Sign In'
+              {/* Error */}
+              {error && (
+                <div className="bg-red-100 border-2 border-red-600 rounded-xl px-4 py-3 text-red-700 text-sm font-bold">
+                  ⚠ {error}
+                </div>
               )}
-            </button>
 
-          </form>
-
-          {/* Demo Accounts */}
-          <div className="mt-6 pt-6 border-t border-white/10">
-
-            <p className="text-xs text-blue-300/70 mb-3 text-center">
-              Demo Accounts
-            </p>
-
-            <div className="grid grid-cols-2 gap-2">
-
-              {/* Citizen Demo */}
+              {/* Submit */}
               <button
-                type="button"
-                onClick={() => fillDemo('citizen')}
-                className="text-left bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 transition-all group"
+                type="submit"
+                disabled={loading}
+                className="btn-brutal-primary w-full py-4 rounded-xl text-base font-extrabold disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <div className="flex items-center gap-1.5 mb-1">
-                  <User size={12} className="text-blue-400" />
-                  <span className="text-xs font-medium text-blue-300">
-                    Citizen
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Verifying...
                   </span>
-                </div>
-
-                <div className="text-xs text-white/50 group-hover:text-white/70">
-                  citizen@demo.com
-                </div>
+                ) : (
+                  'Sign In →'
+                )}
               </button>
+            </form>
 
-              {/* Official Demo */}
-              <button
-                type="button"
-                onClick={() => fillDemo('official')}
-                className="text-left bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 transition-all group"
-              >
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Shield size={12} className="text-blue-400" />
-                  <span className="text-xs font-medium text-blue-300">
-                    Official
-                  </span>
-                </div>
-
-                <div className="text-xs text-white/50 group-hover:text-white/70">
-                  official@demo.com
-                </div>
-              </button>
-
+            {/* Demo accounts */}
+            <div className="border-t-2 border-black/10 pt-5">
+              <p className="font-bold text-xs uppercase tracking-widest mb-3 text-black/60">Quick Demo Access</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => fillDemo('citizen')}
+                  className="btn-brutal-secondary py-2.5 px-3 rounded-xl text-xs font-bold"
+                >
+                  Citizen Demo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fillDemo('official')}
+                  className="btn-brutal-secondary py-2.5 px-3 rounded-xl text-xs font-bold"
+                >
+                  Official Demo
+                </button>
+              </div>
+              <p className="text-xs text-black/50 font-medium mt-3 text-center">
+                Password for all demo accounts: <span className="font-bold text-black">demo1234</span>
+              </p>
             </div>
           </div>
 
+          {/* Register link */}
+          <p className="text-center font-bold text-sm mt-6">
+            Don't have an account?{' '}
+            <button onClick={() => navigate('/register')} className="underline decoration-2">
+              Register here →
+            </button>
+          </p>
         </div>
-
-        {/* Footer */}
-        <p className="text-center text-blue-400/40 text-xs mt-6">
-          © 2026 NexGen Governance Platform • Powered by Google Gemini AI
-        </p>
-
       </div>
     </div>
   );

@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { MapPin, Filter, ChevronDown, Info, TrendingUp, Users, AlertTriangle, DollarSign } from 'lucide-react';
+import { MapPin, Filter, ChevronDown, Info } from 'lucide-react';
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { analyticsService } from '../../services/analyticsService';
 
 const SCORE_BREAKDOWN = [
-  { label: 'Citizen Demand', weight: 35, color: 'bg-blue-500' },
-  { label: 'Infrastructure Gap', weight: 25, color: 'bg-orange-500' },
-  { label: 'Population Impact', weight: 20, color: 'bg-red-500' },
-  { label: 'Severity Level', weight: 10, color: 'bg-yellow-500' },
-  { label: 'Investment Gap', weight: 10, color: 'bg-purple-500' },
+  { label: 'Citizen Demand', weight: 35, color: 'bg-brand-yellow' },
+  { label: 'Infrastructure Gap', weight: 25, color: 'bg-brand-sage' },
+  { label: 'Population Impact', weight: 20, color: 'bg-black' },
+  { label: 'Severity Level', weight: 10, color: 'bg-red-500' },
+  { label: 'Investment Gap', weight: 10, color: 'bg-orange-500' },
 ];
 
 export default function DemandHotspots() {
@@ -26,21 +26,22 @@ export default function DemandHotspots() {
   ];
 
   const getPriorityColor = (score: number) => {
-    if (score >= 80) return { text: 'text-red-600', bg: 'bg-red-100', bar: '#dc2626' };
-    if (score >= 70) return { text: 'text-orange-600', bg: 'bg-orange-100', bar: '#f97316' };
-    if (score >= 60) return { text: 'text-yellow-600', bg: 'bg-yellow-100', bar: '#eab308' };
-    return { text: 'text-green-600', bg: 'bg-green-100', bar: '#22c55e' };
+    if (score >= 80) return { text: 'text-red-700', bg: 'bg-red-100', border: 'border-red-600', bar: 'bg-red-600' };
+    if (score >= 70) return { text: 'text-orange-700', bg: 'bg-orange-100', border: 'border-orange-600', bar: 'bg-orange-500' };
+    if (score >= 60) return { text: 'text-black', bg: 'bg-brand-yellow', border: 'border-black', bar: 'bg-brand-yellow' };
+    return { text: 'text-black', bg: 'bg-brand-sage', border: 'border-black', bar: 'bg-brand-sage' };
   };
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Demand Hotspots</h1>
-        <p className="text-slate-500 text-sm">AI-identified high-priority infrastructure deficit zones</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-brand-yellow card-brutal rounded-2xl p-6">
+        <h1 className="font-heading font-extrabold text-3xl">DEMAND HOTSPOTS</h1>
+        <p className="font-medium text-sm mt-1 text-black/70">AI-identified high-priority infrastructure deficit zones</p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex gap-3 flex-wrap">
+      <div className="bg-white card-brutal rounded-2xl p-4 flex gap-3 flex-wrap">
         {[
           { label: 'Country', value: countryFilter, onChange: setCountryFilter, options: ['All', 'India', 'Brazil', 'China', 'South Africa'] },
           { label: 'Category', value: categoryFilter, onChange: setCategoryFilter, options: ['All', 'Roads', 'Water', 'Electricity', 'Healthcare', 'Education'] },
@@ -49,61 +50,71 @@ export default function DemandHotspots() {
             <select
               value={f.value}
               onChange={e => f.onChange(e.target.value)}
-              className="appearance-none bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 pr-8 text-sm text-slate-700 focus:outline-none focus:border-blue-400 cursor-pointer"
+              className="appearance-none bg-white border-2 border-black rounded-xl px-4 py-2.5 pr-10 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-black cursor-pointer"
             >
               {f.options.map(o => <option key={o}>{o}</option>)}
             </select>
-            <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-black pointer-events-none" />
           </div>
         ))}
-        <button className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors ml-auto">
-          <Filter size={14} />
+        <button className="btn-brutal-primary flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm ml-auto">
+          <Filter size={16} />
           Apply Filters
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Hotspot Table */}
-        <div className="col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="lg:col-span-2 bg-white card-brutal rounded-2xl overflow-hidden">
+          <div className="bg-brand-charcoal px-6 py-4 flex items-center gap-3">
+            <div className="w-8 h-8 bg-brand-yellow border-2 border-brand-yellow rounded-lg flex items-center justify-center font-extrabold text-sm">🗺️</div>
+            <div>
+              <p className="text-white font-heading font-extrabold">REGION ANALYSIS</p>
+            </div>
+          </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm font-body">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Region</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Requests</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Infra Gap</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Pop. Impact</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Inv. Gap</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Priority</th>
+                <tr className="border-b-2 border-black bg-brand-sage">
+                  <th className="text-left px-5 py-3 font-extrabold text-xs uppercase tracking-widest">Region</th>
+                  <th className="text-right px-5 py-3 font-extrabold text-xs uppercase tracking-widest">Requests</th>
+                  <th className="text-right px-5 py-3 font-extrabold text-xs uppercase tracking-widest">Infra Gap</th>
+                  <th className="text-right px-5 py-3 font-extrabold text-xs uppercase tracking-widest">Priority</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {hotspots.map(region => {
+              <tbody>
+                {hotspots.map((region, i) => {
                   const pc = getPriorityColor(region.priorityScore);
+                  const isSelected = selectedRegion.id === region.id;
                   return (
                     <tr
                       key={region.id}
                       onClick={() => setSelectedRegion(region)}
-                      className={`cursor-pointer transition-colors hover:bg-blue-50 ${selectedRegion.id === region.id ? 'bg-blue-50' : ''}`}
+                      className={`cursor-pointer border-b border-black/10 transition-colors ${
+                        isSelected ? 'bg-black text-white' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                      } ${!isSelected && 'hover:bg-brand-yellow/20'}`}
                     >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${region.priorityScore >= 80 ? 'bg-red-500' : region.priorityScore >= 70 ? 'bg-orange-500' : 'bg-yellow-500'}`} />
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-3 h-3 border-2 border-black rounded-full ${pc.bar}`} />
                           <div>
-                            <p className="font-medium text-slate-800 text-sm">{region.name}</p>
-                            <p className="text-xs text-slate-400">{region.country}</p>
+                            <p className={`font-bold ${isSelected ? 'text-brand-yellow' : 'text-black'}`}>{region.name}</p>
+                            <p className={`text-xs font-medium ${isSelected ? 'text-white/60' : 'text-black/50'}`}>{region.country}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-700">{region.requestCount.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="font-semibold text-orange-600">{region.infrastructureGap}%</span>
+                      <td className={`px-5 py-4 text-right font-bold ${isSelected ? 'text-white' : 'text-black'}`}>
+                        {region.requestCount.toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-700">{region.populationImpact}%</td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-700">{region.investmentGap}%</td>
-                      <td className="px-4 py-3 text-right">
-                        <span className={`font-bold text-lg ${pc.text}`}>{region.priorityScore}</span>
-                        <span className="text-slate-400 text-xs">/100</span>
+                      <td className="px-5 py-4 text-right">
+                        <span className="font-bold text-orange-600">{region.infrastructureGap}%</span>
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <span className={`px-2.5 py-1 border-2 rounded-lg text-[10px] font-extrabold uppercase tracking-wider ${
+                          isSelected ? 'bg-white border-white text-black' : `${pc.bg} ${pc.border} ${pc.text}`
+                        }`}>
+                          {region.priorityScore}/100
+                        </span>
                       </td>
                     </tr>
                   );
@@ -114,55 +125,61 @@ export default function DemandHotspots() {
         </div>
 
         {/* Score Breakdown Panel */}
-        <div className="space-y-4">
+        <div className="space-y-5">
           {/* Selected Region Details */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <MapPin size={16} className="text-blue-600" />
-              <h3 className="font-semibold text-slate-800 text-sm">{selectedRegion.name}</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <div className="text-center">
-                <p className={`text-3xl font-bold ${getPriorityColor(selectedRegion.priorityScore).text}`}>{selectedRegion.priorityScore}</p>
-                <p className="text-xs text-slate-500">Priority Score</p>
+          <div className="bg-white card-brutal rounded-2xl p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-brand-sage border-2 border-black rounded-xl flex items-center justify-center">
+                <MapPin size={20} className="text-black" />
               </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-blue-600">{selectedRegion.requestCount.toLocaleString()}</p>
-                <p className="text-xs text-slate-500">Requests</p>
+              <h3 className="font-heading font-extrabold text-xl">{selectedRegion.name}</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="text-center p-3 border-2 border-black rounded-xl bg-brand-yellow">
+                <p className="text-3xl font-heading font-extrabold">{selectedRegion.priorityScore}</p>
+                <p className="font-bold text-xs uppercase tracking-widest mt-1">Priority</p>
+              </div>
+              <div className="text-center p-3 border-2 border-black rounded-xl bg-black text-white">
+                <p className="text-3xl font-heading font-extrabold text-brand-yellow">{selectedRegion.requestCount.toLocaleString()}</p>
+                <p className="font-bold text-xs uppercase tracking-widest mt-1">Requests</p>
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={160}>
-              <RadarChart data={radarData}>
-                <PolarGrid stroke="#e2e8f0" />
-                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9, fill: '#64748b' }} />
-                <Radar dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.15} />
-                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 11 }} />
-              </RadarChart>
-            </ResponsiveContainer>
+            <div className="border-2 border-black rounded-xl overflow-hidden pt-2 bg-gray-50">
+              <ResponsiveContainer width="100%" height={180}>
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="#000000" strokeOpacity={0.2} />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fontWeight: 700, fill: '#000000' }} />
+                  <Radar dataKey="value" stroke="#000000" strokeWidth={2} fill="#ffe17c" fillOpacity={0.8} />
+                  <Tooltip contentStyle={{ border: '2px solid #000', borderRadius: '8px', fontWeight: 700, backgroundColor: '#fff' }} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
           {/* Score Breakdown */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <Info size={15} className="text-blue-600" />
-              <h3 className="font-semibold text-slate-800 text-sm">Priority Score Breakdown</h3>
+          <div className="bg-white card-brutal rounded-2xl p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 bg-brand-yellow border-2 border-black rounded-lg flex items-center justify-center">
+                <Info size={16} className="text-black" />
+              </div>
+              <h3 className="font-heading font-extrabold text-lg uppercase">Score Breakdown</h3>
             </div>
-            <div className="space-y-2.5">
+            <div className="space-y-4">
               {SCORE_BREAKDOWN.map(item => (
                 <div key={item.label}>
-                  <div className="flex justify-between text-xs text-slate-600 mb-1">
+                  <div className="flex justify-between font-bold text-xs uppercase tracking-wider mb-1.5">
                     <span>{item.label}</span>
-                    <span className="font-semibold">{item.weight}%</span>
+                    <span>{item.weight}%</span>
                   </div>
-                  <div className="h-1.5 bg-slate-100 rounded-full">
-                    <div className={`h-1.5 ${item.color} rounded-full`} style={{ width: `${item.weight * 2.5}%` }} />
+                  <div className="h-2.5 bg-black/10 border border-black/20 rounded-full">
+                    <div className={`h-full ${item.color} rounded-full border-r border-black`} style={{ width: `${item.weight * 2.5}%` }} />
                   </div>
                 </div>
               ))}
             </div>
-            <div className="mt-3 pt-3 border-t border-slate-100">
-              <p className="text-xs text-slate-400 italic">
-                ⚠️ This is a decision-support indicator. Final decisions remain with authorized officials.
+            <div className="mt-5 pt-4 border-t-2 border-black/10">
+              <p className="font-medium text-xs text-black/60 leading-relaxed">
+                <span className="font-extrabold text-black uppercase tracking-wider">Note:</span> This is a decision-support indicator. Final decisions remain with authorized officials.
               </p>
             </div>
           </div>
@@ -171,3 +188,4 @@ export default function DemandHotspots() {
     </div>
   );
 }
+
