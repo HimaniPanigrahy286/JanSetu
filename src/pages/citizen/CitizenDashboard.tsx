@@ -1,27 +1,25 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
-import { Send, Mic, FileText, Clock, CheckCircle, AlertCircle, MapPin, Globe, ChevronRight, TrendingUp } from 'lucide-react';
 import { authService } from '../../services/authService';
 import { requestService } from '../../services/requestService';
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Roads: 'bg-blue-100 text-blue-700',
-  Water: 'bg-cyan-100 text-cyan-700',
-  Electricity: 'bg-yellow-100 text-yellow-700',
-  Healthcare: 'bg-red-100 text-red-700',
-  Education: 'bg-purple-100 text-purple-700',
-  Transport: 'bg-orange-100 text-orange-700',
-  Sanitation: 'bg-green-100 text-green-700',
-  'Digital Infrastructure': 'bg-indigo-100 text-indigo-700',
-  'Public Facilities': 'bg-teal-100 text-teal-700',
+const CATEGORY_ICONS: Record<string, string> = {
+  Roads: '🛣️',
+  Water: '💧',
+  Electricity: '⚡',
+  Healthcare: '🏥',
+  Education: '🏫',
+  Transport: '🚌',
+  Sanitation: '🗑️',
+  'Digital Infrastructure': '📡',
+  'Public Facilities': '🏛️',
 };
 
-const STATUS_CONFIG: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
-  pending: { color: 'bg-yellow-100 text-yellow-700', label: 'Pending', icon: <Clock size={12} /> },
-  under_review: { color: 'bg-blue-100 text-blue-700', label: 'Under Review', icon: <AlertCircle size={12} /> },
-  in_progress: { color: 'bg-orange-100 text-orange-700', label: 'In Progress', icon: <TrendingUp size={12} /> },
-  resolved: { color: 'bg-green-100 text-green-700', label: 'Resolved', icon: <CheckCircle size={12} /> },
-  rejected: { color: 'bg-red-100 text-red-700', label: 'Rejected', icon: <AlertCircle size={12} /> },
+const STATUS_CONFIG: Record<string, { label: string; bg: string; border: string; text: string }> = {
+  pending: { label: 'Pending', bg: 'bg-brand-yellow', border: 'border-black', text: 'text-black' },
+  under_review: { label: 'Under Review', bg: 'bg-brand-sage', border: 'border-black', text: 'text-black' },
+  in_progress: { label: 'In Progress', bg: 'bg-black', border: 'border-black', text: 'text-brand-yellow' },
+  resolved: { label: 'Resolved', bg: 'bg-white', border: 'border-green-600', text: 'text-green-700' },
+  rejected: { label: 'Rejected', bg: 'bg-red-100', border: 'border-red-600', text: 'text-red-700' },
 };
 
 export default function CitizenDashboard() {
@@ -32,142 +30,134 @@ export default function CitizenDashboard() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
+  const statCards = [
+    { label: 'Total Submitted', value: stats.total, bg: 'bg-brand-yellow', note: 'All your requests' },
+    { label: 'Under Review', value: stats.underReview, bg: 'bg-brand-sage', note: 'Being assessed' },
+    { label: 'In Progress', value: stats.inProgress, bg: 'bg-black text-white', note: 'Action started', textClass: 'text-white' },
+    { label: 'Resolved', value: stats.resolved, bg: 'bg-white', note: 'Successfully closed' },
+  ];
+
   return (
-    <div className="space-y-5">
-      {/* Welcome Card */}
-      <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-5 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-8 translate-x-8" />
-        <div className="absolute bottom-0 right-8 w-20 h-20 bg-white/5 rounded-full translate-y-6" />
-        <p className="text-blue-200 text-sm">{greeting},</p>
-        <h2 className="text-2xl font-bold mt-0.5">{user.name.split(' ')[0]} 👋</h2>
-        <div className="flex items-center gap-4 mt-3 text-sm text-blue-200">
-          <span className="flex items-center gap-1.5">
-            <MapPin size={13} />
-            {user.location}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Globe size={13} />
-            {user.language}
-          </span>
-        </div>
-        <div className="mt-4 flex gap-2">
-          <span className="text-xs bg-blue-500/50 text-blue-100 px-2 py-1 rounded-full border border-blue-400/30">
-            Citizen Portal
-          </span>
-          <span className="text-xs bg-green-500/30 text-green-200 px-2 py-1 rounded-full border border-green-400/30">
-            ● Platform Active
-          </span>
+    <div className="space-y-6">
+      {/* Welcome Banner */}
+      <div className="bg-brand-yellow card-brutal-lg rounded-2xl p-6 relative overflow-hidden">
+        <div className="relative z-10">
+          <p className="font-bold text-xs uppercase tracking-widest text-black/60">{greeting},</p>
+          <h2 className="font-heading font-extrabold text-3xl md:text-4xl mt-1">{user.name} 👋</h2>
+          <div className="flex flex-wrap items-center gap-3 mt-3">
+            <span className="px-3 py-1 bg-white border-2 border-black rounded-full text-xs font-bold shadow-brutal-sm">
+              📍 {user.location}
+            </span>
+            <span className="px-3 py-1 bg-white border-2 border-black rounded-full text-xs font-bold shadow-brutal-sm">
+              🌐 {user.language}
+            </span>
+            <span className="px-3 py-1 bg-black text-brand-yellow border-2 border-black rounded-full text-xs font-bold">
+              ● Citizen Portal Active
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm text-center">
-          <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
-          <p className="text-xs text-slate-500 mt-0.5">Total</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm text-center">
-          <p className="text-2xl font-bold text-yellow-600">{stats.pending + stats.underReview + stats.inProgress}</p>
-          <p className="text-xs text-slate-500 mt-0.5">Pending</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm text-center">
-          <p className="text-2xl font-bold text-green-600">{stats.resolved}</p>
-          <p className="text-xs text-slate-500 mt-0.5">Resolved</p>
-        </div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {statCards.map(card => (
+          <div key={card.label} className={`${card.bg} card-brutal rounded-2xl p-5 text-center`}>
+            <p className={`font-heading font-extrabold text-4xl ${card.textClass ?? 'text-black'}`}>{card.value}</p>
+            <p className={`font-bold text-xs uppercase tracking-wider mt-1 ${card.textClass ?? 'text-black'}`}>{card.label}</p>
+            <p className={`text-xs mt-1 ${card.textClass ? 'text-white/60' : 'text-black/50'}`}>{card.note}</p>
+          </div>
+        ))}
       </div>
 
       {/* Quick Actions */}
-      <div>
-        <h3 className="text-sm font-semibold text-slate-600 mb-3 uppercase tracking-wide">Quick Actions</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <Link
-            to="/citizen/submit"
-            className="bg-white border-2 border-blue-100 hover:border-blue-300 rounded-2xl p-4 flex flex-col gap-2 transition-all hover:shadow-md group"
-          >
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-600 transition-colors">
-              <Send size={18} className="text-blue-600 group-hover:text-white transition-colors" />
-            </div>
-            <p className="font-semibold text-sm text-slate-800 leading-tight">Submit Development Request</p>
-            <p className="text-xs text-slate-500">Report infrastructure issues</p>
-          </Link>
-          <Link
-            to="/citizen/voice"
-            className="bg-white border-2 border-purple-100 hover:border-purple-300 rounded-2xl p-4 flex flex-col gap-2 transition-all hover:shadow-md group"
-          >
-            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center group-hover:bg-purple-600 transition-colors">
-              <Mic size={18} className="text-purple-600 group-hover:text-white transition-colors" />
-            </div>
-            <p className="font-semibold text-sm text-slate-800 leading-tight">Submit Voice Request</p>
-            <p className="text-xs text-slate-500">Speak in your language</p>
-          </Link>
-        </div>
-      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Link to="/citizen/submit" className="p-6 bg-white card-brutal rounded-2xl flex flex-col gap-3 hover:bg-brand-yellow transition-colors group">
+          <div className="w-12 h-12 bg-brand-yellow border-2 border-black rounded-xl flex items-center justify-center text-2xl group-hover:bg-white transition-colors">
+            ➕
+          </div>
+          <div>
+            <h3 className="font-heading font-extrabold text-xl">Submit Request</h3>
+            <p className="text-sm font-medium text-black/60 mt-1">Report a new infrastructure complaint in your area.</p>
+          </div>
+          <span className="font-bold text-xs uppercase tracking-widest mt-auto">File Complaint →</span>
+        </Link>
 
-      {/* Categories */}
-      <div>
-        <h3 className="text-sm font-semibold text-slate-600 mb-3 uppercase tracking-wide">Categories</h3>
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(CATEGORY_COLORS).map(([cat, color]) => (
-            <Link
-              key={cat}
-              to={`/citizen/submit?category=${encodeURIComponent(cat)}`}
-              className={`text-xs px-3 py-1.5 rounded-full font-medium ${color} hover:opacity-80 transition-opacity`}
-            >
-              {cat}
-            </Link>
-          ))}
-        </div>
+        <Link to="/citizen/voice" className="p-6 bg-white card-brutal rounded-2xl flex flex-col gap-3 hover:bg-brand-sage transition-colors group">
+          <div className="w-12 h-12 bg-brand-sage border-2 border-black rounded-xl flex items-center justify-center text-2xl group-hover:bg-white transition-colors">
+            🎤
+          </div>
+          <div>
+            <h3 className="font-heading font-extrabold text-xl">Voice Input</h3>
+            <p className="text-sm font-medium text-black/60 mt-1">Speak in your regional language — Odia, Hindi, Tamil and more.</p>
+          </div>
+          <span className="font-bold text-xs uppercase tracking-widest mt-auto">Start Recording →</span>
+        </Link>
+
+        <Link to="/citizen/requests" className="p-6 bg-white card-brutal rounded-2xl flex flex-col gap-3 hover:bg-black group transition-colors">
+          <div className="w-12 h-12 bg-black border-2 border-black rounded-xl flex items-center justify-center text-2xl group-hover:bg-brand-yellow transition-colors">
+            📋
+          </div>
+          <div>
+            <h3 className="font-heading font-extrabold text-xl group-hover:text-white transition-colors">My Requests</h3>
+            <p className="text-sm font-medium text-black/60 mt-1 group-hover:text-white/60 transition-colors">View all your submitted requests and their statuses.</p>
+          </div>
+          <span className="font-bold text-xs uppercase tracking-widest mt-auto group-hover:text-white transition-colors">View All →</span>
+        </Link>
       </div>
 
       {/* Recent Requests */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Recent Requests</h3>
-          <Link to="/citizen/requests" className="text-xs text-blue-600 font-medium flex items-center gap-1 hover:gap-2 transition-all">
-            View all <ChevronRight size={14} />
+      {recentRequests.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-heading font-extrabold text-xl">Recent Requests</h3>
+            <Link to="/citizen/requests" className="font-bold text-xs uppercase tracking-widest hover:underline decoration-2">
+              View All →
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {recentRequests.map(req => {
+              const sc = STATUS_CONFIG[req.status];
+              return (
+                <div key={req.id} className="bg-white card-brutal rounded-xl p-4 flex items-center gap-4">
+                  <div className="w-10 h-10 bg-brand-sage border-2 border-black rounded-lg flex items-center justify-center text-xl shrink-0">
+                    {CATEGORY_ICONS[req.category] ?? '📌'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm truncate">{req.aiAnalysis.summary || req.description.slice(0, 60) + '...'}</p>
+                    <p className="text-xs text-black/50 font-medium mt-0.5">
+                      {req.category} &bull; {req.location} &bull; {new Date(req.createdAt).toLocaleDateString('en-IN')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className={`px-2.5 py-1 ${sc.bg} ${sc.text} border-2 ${sc.border} rounded-lg text-[10px] font-extrabold uppercase tracking-wider`}>
+                      {sc.label}
+                    </span>
+                    <Link
+                      to={`/citizen/requests/${req.id}`}
+                      className="btn-brutal-secondary px-3 py-1.5 text-xs font-bold rounded-lg"
+                    >
+                      Track →
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {recentRequests.length === 0 && (
+        <div className="bg-white card-brutal rounded-2xl p-10 text-center">
+          <div className="text-5xl mb-4">📭</div>
+          <h3 className="font-heading font-extrabold text-2xl">No Requests Yet</h3>
+          <p className="font-medium text-sm text-black/60 mt-2 max-w-sm mx-auto">
+            You haven't submitted any infrastructure requests yet. Start by filing your first complaint.
+          </p>
+          <Link to="/citizen/submit" className="btn-brutal-primary mt-6 px-8 py-3 rounded-xl font-extrabold inline-flex items-center gap-2">
+            Submit First Request →
           </Link>
         </div>
-        <div className="space-y-3">
-          {recentRequests.length === 0 ? (
-            <div className="bg-white rounded-xl p-6 text-center border border-slate-200">
-              <FileText size={32} className="text-slate-300 mx-auto mb-2" />
-              <p className="text-slate-500 text-sm">No requests yet</p>
-              <Link to="/citizen/submit" className="text-blue-600 text-sm font-medium mt-1 inline-block">Submit your first request →</Link>
-            </div>
-          ) : (
-            recentRequests.map(req => {
-              const status = STATUS_CONFIG[req.status];
-              return (
-                <Link
-                  key={req.id}
-                  to={`/citizen/requests/${req.id}`}
-                  className="bg-white rounded-xl p-4 border border-slate-200 block hover:border-blue-300 hover:shadow-sm transition-all"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${CATEGORY_COLORS[req.category] || 'bg-slate-100 text-slate-600'}`}>
-                          {req.category}
-                        </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1 ${status.color}`}>
-                          {status.icon}
-                          {status.label}
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-700 line-clamp-2">{req.description}</p>
-                      <p className="text-xs text-slate-400 mt-1.5 flex items-center gap-1">
-                        <MapPin size={11} />
-                        {req.location}
-                      </p>
-                    </div>
-                    <ChevronRight size={16} className="text-slate-300 shrink-0 mt-1" />
-                  </div>
-                </Link>
-              );
-            })
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 }

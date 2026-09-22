@@ -1,21 +1,32 @@
-import React from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Globe, Clock, Brain, Zap, Mic, CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { requestService } from '../../services/requestService';
 
-const STATUS_CONFIG: Record<string, { color: string; label: string; icon: React.ReactNode; bg: string }> = {
-  pending: { color: 'text-yellow-700', label: 'Pending Review', icon: <Clock size={16} />, bg: 'bg-yellow-100' },
-  under_review: { color: 'text-blue-700', label: 'Under Review', icon: <AlertCircle size={16} />, bg: 'bg-blue-100' },
-  in_progress: { color: 'text-orange-700', label: 'In Progress', icon: <TrendingUp size={16} />, bg: 'bg-orange-100' },
-  resolved: { color: 'text-green-700', label: 'Resolved', icon: <CheckCircle size={16} />, bg: 'bg-green-100' },
-  rejected: { color: 'text-red-700', label: 'Rejected', icon: <AlertCircle size={16} />, bg: 'bg-red-100' },
+const STATUS_STAGES = [
+  { key: 'pending', label: 'Submitted', desc: 'Your request has been received by the system.' },
+  { key: 'under_review', label: 'Under Review', desc: 'A government official is reviewing your submission.' },
+  { key: 'in_progress', label: 'In Progress', desc: 'Action is being taken to resolve this issue.' },
+  { key: 'resolved', label: 'Resolved', desc: 'This infrastructure issue has been addressed.' },
+];
+
+const STATUS_ORDER: Record<string, number> = {
+  pending: 0,
+  under_review: 1,
+  in_progress: 2,
+  resolved: 3,
+  rejected: 3,
 };
 
-const SEV_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  critical: { label: 'Critical', color: 'text-red-700', bg: 'bg-red-100' },
-  high: { label: 'High', color: 'text-orange-700', bg: 'bg-orange-100' },
-  medium: { label: 'Medium', color: 'text-yellow-700', bg: 'bg-yellow-100' },
-  low: { label: 'Low', color: 'text-green-700', bg: 'bg-green-100' },
+const SEV_CONFIG: Record<string, { label: string; bg: string; border: string; text: string }> = {
+  critical: { label: 'Critical', bg: 'bg-red-100', border: 'border-red-600', text: 'text-red-700' },
+  high: { label: 'High', bg: 'bg-orange-100', border: 'border-orange-600', text: 'text-orange-700' },
+  medium: { label: 'Medium', bg: 'bg-brand-yellow', border: 'border-black', text: 'text-black' },
+  low: { label: 'Low', bg: 'bg-brand-sage', border: 'border-black', text: 'text-black' },
+};
+
+const CATEGORY_ICONS: Record<string, string> = {
+  Roads: '🛣️', Water: '💧', Electricity: '⚡', Healthcare: '🏥',
+  Education: '🏫', Transport: '🚌', Sanitation: '🗑️',
+  'Digital Infrastructure': '📡', 'Public Facilities': '🏛️',
 };
 
 export default function RequestDetails() {
@@ -25,143 +36,191 @@ export default function RequestDetails() {
 
   if (!request) {
     return (
-      <div className="text-center py-12">
-        <p className="text-slate-500">Request not found</p>
-        <Link to="/citizen/requests" className="text-blue-600 text-sm mt-2 inline-block">← Back to requests</Link>
+      <div className="text-center py-16">
+        <div className="text-5xl mb-4">📭</div>
+        <h2 className="font-heading font-extrabold text-2xl">Request Not Found</h2>
+        <p className="font-medium text-sm text-black/60 mt-2">This request ID doesn't exist or may have been removed.</p>
+        <button onClick={() => navigate('/citizen/requests')} className="btn-brutal-primary mt-6 px-8 py-3 rounded-xl font-extrabold">
+          ← Back to My Requests
+        </button>
       </div>
     );
   }
 
-  const status = STATUS_CONFIG[request.status];
+  const currentStepIdx = STATUS_ORDER[request.status] ?? 0;
   const sev = SEV_CONFIG[request.aiAnalysis.severity];
 
   const timeline = [
     { label: 'Request Submitted', date: request.createdAt, done: true },
     { label: 'AI Analysis Completed', date: request.createdAt, done: true },
     { label: 'Under Official Review', date: request.status !== 'pending' ? request.updatedAt : null, done: request.status !== 'pending' },
-    { label: 'Action In Progress', date: request.status === 'in_progress' || request.status === 'resolved' ? request.updatedAt : null, done: request.status === 'in_progress' || request.status === 'resolved' },
-    { label: 'Resolved', date: request.status === 'resolved' ? request.updatedAt : null, done: request.status === 'resolved' },
+    { label: 'Action In Progress', date: (request.status === 'in_progress' || request.status === 'resolved') ? request.updatedAt : null, done: request.status === 'in_progress' || request.status === 'resolved' },
+    { label: 'Issue Resolved', date: request.status === 'resolved' ? request.updatedAt : null, done: request.status === 'resolved' },
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Back */}
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-600 hover:text-blue-600 transition-colors text-sm font-medium">
-        <ArrowLeft size={16} />
-        Back to Requests
+      <button
+        onClick={() => navigate(-1)}
+        className="btn-brutal-secondary px-4 py-2 rounded-xl text-sm font-bold"
+      >
+        ← Back
       </button>
 
       {/* Header Card */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs text-slate-400 font-mono">{request.id}</span>
-          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full ${status.bg} ${status.color} text-xs font-medium`}>
-            {status.icon}
-            {status.label}
+      <div className="bg-brand-yellow card-brutal-lg rounded-2xl p-6">
+        <div className="flex flex-wrap items-start gap-3 justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 bg-white border-2 border-black rounded-xl flex items-center justify-center text-2xl">
+                {CATEGORY_ICONS[request.category] ?? '📌'}
+              </div>
+              <div>
+                <span className="font-heading font-extrabold text-xl">{request.category}</span>
+                {request.isVoice && (
+                  <span className="ml-2 px-2 py-0.5 bg-black text-brand-yellow text-[10px] font-extrabold rounded-lg">🎤 VOICE</span>
+                )}
+              </div>
+            </div>
+            <p className="font-medium text-sm text-black/80 max-w-2xl">{request.description}</p>
+          </div>
+          <div className="text-right shrink-0">
+            <span className={`px-3 py-1.5 ${sev.bg} ${sev.text} border-2 ${sev.border} rounded-lg text-xs font-extrabold uppercase`}>
+              {sev.label} Severity
+            </span>
+            <p className="font-mono text-xs text-black/40 mt-2">{request.id}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
-            {request.category}
-          </span>
-          {request.isVoice && (
-            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-              <Mic size={10} /> Voice Request
-            </span>
-          )}
-        </div>
-        <p className="text-slate-800 text-sm leading-relaxed">{request.description}</p>
-        <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
-          <span className="flex items-center gap-1"><MapPin size={11} />{request.location}</span>
-          <span className="flex items-center gap-1"><Globe size={11} />{request.language}</span>
-          <span className="flex items-center gap-1"><Clock size={11} />
-            {new Date(request.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-          </span>
+        <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t-2 border-black/10 text-sm font-medium">
+          <span>📍 {request.location}</span>
+          <span>🌐 {request.language}</span>
+          <span>🗓 {new Date(request.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
         </div>
       </div>
 
-      {/* Image */}
+      {/* Lifecycle Tracker */}
+      <div className="bg-white card-brutal rounded-2xl p-6">
+        <h3 className="font-heading font-extrabold text-xl mb-6">REQUEST LIFECYCLE</h3>
+        <div className="flex flex-col md:flex-row gap-0">
+          {STATUS_STAGES.map((stage, i) => {
+            const isActive = i === currentStepIdx || (request.status === 'rejected' && i === 3);
+            const isDone = i < currentStepIdx || (request.status === 'resolved' && i <= 3);
+            const isRejected = request.status === 'rejected' && i === 3;
+
+            return (
+              <div key={stage.key} className="flex-1 relative">
+                {/* Connector line */}
+                {i < STATUS_STAGES.length - 1 && (
+                  <div className={`hidden md:block absolute top-6 left-1/2 right-0 h-0.5 z-0 ${isDone ? 'bg-black' : 'bg-black/20'}`} />
+                )}
+                <div className="relative z-10 flex flex-col items-center text-center px-4 pb-6">
+                  {/* Circle */}
+                  <div className={`w-12 h-12 rounded-full border-2 border-black flex items-center justify-center font-extrabold text-sm mb-3 transition-all ${
+                    isRejected
+                      ? 'bg-red-600 text-white'
+                      : isActive
+                        ? 'bg-brand-yellow text-black shadow-brutal-sm'
+                        : isDone
+                          ? 'bg-black text-white'
+                          : 'bg-white text-black/30'
+                  }`}>
+                    {isRejected ? '✕' : isDone || isActive ? '✓' : (i + 1)}
+                  </div>
+                  <p className={`font-bold text-sm ${isActive ? 'text-black' : isDone ? 'text-black' : 'text-black/30'}`}>
+                    {isRejected ? 'Rejected' : stage.label}
+                  </p>
+                  <p className={`text-xs mt-1 max-w-28 ${isActive ? 'text-black/70' : 'text-black/30'}`}>
+                    {isRejected ? 'Your request was not approved.' : stage.desc}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Image evidence */}
       {request.imageUrl && (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-          <img src={request.imageUrl} alt="Evidence" className="w-full h-48 object-cover" />
+        <div className="bg-white card-brutal rounded-2xl overflow-hidden">
+          <div className="bg-brand-sage border-b-2 border-black px-5 py-3">
+            <h3 className="font-heading font-extrabold text-sm uppercase tracking-widest">Evidence Photo</h3>
+          </div>
+          <img src={request.imageUrl} alt="Evidence" className="w-full object-cover max-h-64" />
         </div>
       )}
 
       {/* AI Analysis */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 flex items-center gap-2">
-          <Brain size={16} className="text-white" />
-          <span className="text-white font-semibold text-sm">AI Analysis Report</span>
-          <span className="ml-auto text-blue-200 text-xs">Confidence: {Math.round(request.aiAnalysis.confidence * 100)}%</span>
+      <div className="bg-white card-brutal rounded-2xl overflow-hidden">
+        <div className="bg-brand-charcoal px-5 py-4 flex items-center gap-3">
+          <div className="w-8 h-8 bg-brand-yellow border-2 border-brand-yellow rounded-lg flex items-center justify-center font-extrabold text-sm">🧠</div>
+          <div>
+            <p className="text-white font-heading font-extrabold text-sm">AI ANALYSIS REPORT</p>
+            <p className="text-brand-sage text-xs">Confidence: {Math.round(request.aiAnalysis.confidence * 100)}%</p>
+          </div>
         </div>
-        <div className="p-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-slate-50 rounded-xl p-3">
-              <p className="text-xs text-slate-500 mb-1">Detected Language</p>
-              <p className="font-semibold text-slate-800 text-sm">{request.aiAnalysis.detectedLanguage}</p>
-            </div>
-            <div className={`rounded-xl p-3 ${sev.bg}`}>
-              <p className={`text-xs mb-1 ${sev.color} opacity-70`}>Severity</p>
-              <p className={`font-semibold text-sm ${sev.color}`}>{sev.label}</p>
-            </div>
-            <div className="bg-slate-50 rounded-xl p-3">
-              <p className="text-xs text-slate-500 mb-1">Category</p>
-              <p className="font-semibold text-slate-800 text-sm">{request.aiAnalysis.category}</p>
-            </div>
-            <div className="bg-slate-50 rounded-xl p-3">
-              <p className="text-xs text-slate-500 mb-1">Subcategory</p>
-              <p className="font-semibold text-slate-800 text-sm">{request.aiAnalysis.subcategory}</p>
-            </div>
+        <div className="p-5 space-y-4">
+          {/* Summary */}
+          <div className="p-4 bg-brand-yellow border-2 border-black rounded-xl">
+            <p className="font-bold text-xs uppercase tracking-widest mb-2">AI Summary</p>
+            <p className="font-medium text-sm">{request.aiAnalysis.summary}</p>
           </div>
 
-          {/* Summary */}
-          <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
-            <p className="text-xs text-blue-600 font-medium mb-1.5 flex items-center gap-1">
-              <Zap size={12} /> AI Summary
-            </p>
-            <p className="text-sm text-slate-700 leading-relaxed">{request.aiAnalysis.summary}</p>
+          {/* Metadata Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: 'Language', value: request.aiAnalysis.detectedLanguage },
+              { label: 'Category', value: request.aiAnalysis.category },
+              { label: 'Subcategory', value: request.aiAnalysis.subcategory },
+              { label: 'Severity', value: request.aiAnalysis.severity.toUpperCase() },
+            ].map(item => (
+              <div key={item.label} className="p-3 bg-brand-sage border-2 border-black rounded-xl">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-black/60 mb-1">{item.label}</p>
+                <p className="font-bold text-sm">{item.value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Keywords */}
+          <div>
+            <p className="font-bold text-xs uppercase tracking-widest mb-2">Key Terms Detected</p>
+            <div className="flex flex-wrap gap-2">
+              {request.aiAnalysis.keywords.map(k => (
+                <span key={k} className="px-3 py-1 bg-white border-2 border-black rounded-full text-xs font-bold">
+                  {k}
+                </span>
+              ))}
+            </div>
           </div>
 
           {/* Voice Transcription */}
           {request.isVoice && request.voiceTranscription && (
-            <div className="bg-purple-50 rounded-xl p-3 border border-purple-100">
-              <p className="text-xs text-purple-600 font-medium mb-1.5 flex items-center gap-1">
-                <Mic size={12} /> Voice Transcription
-              </p>
-              <p className="text-sm text-slate-700">{request.voiceTranscription}</p>
+            <div className="p-4 bg-black text-white border-2 border-black rounded-xl">
+              <p className="font-bold text-xs uppercase tracking-widest mb-2 text-brand-yellow">🎤 Voice Transcription</p>
+              <p className="font-medium text-sm">{request.voiceTranscription}</p>
             </div>
           )}
-
-          {/* Keywords */}
-          <div>
-            <p className="text-xs text-slate-500 mb-2">Key Terms</p>
-            <div className="flex flex-wrap gap-1.5">
-              {request.aiAnalysis.keywords.map(k => (
-                <span key={k} className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full">{k}</span>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Timeline */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-        <h3 className="font-semibold text-slate-800 text-sm mb-4">Request Timeline</h3>
+      <div className="bg-white card-brutal rounded-2xl p-6">
+        <h3 className="font-heading font-extrabold text-xl mb-6">ACTIVITY TIMELINE</h3>
         <div className="space-y-0">
           {timeline.map((item, i) => (
-            <div key={i} className="flex gap-3">
+            <div key={i} className="flex gap-4">
               <div className="flex flex-col items-center">
-                <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${item.done ? 'bg-blue-600' : 'bg-slate-200'}`}>
-                  {item.done && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-1 ${item.done ? 'bg-black border-black text-white' : 'bg-white border-black/20'}`}>
+                  {item.done && <div className="w-2 h-2 bg-white rounded-full" />}
                 </div>
                 {i < timeline.length - 1 && (
-                  <div className={`w-0.5 h-8 ${item.done ? 'bg-blue-200' : 'bg-slate-100'} my-0.5`} />
+                  <div className={`w-0.5 h-10 my-1 ${item.done ? 'bg-black' : 'bg-black/15'}`} />
                 )}
               </div>
-              <div className="pb-3">
-                <p className={`text-sm font-medium ${item.done ? 'text-slate-800' : 'text-slate-400'}`}>{item.label}</p>
+              <div className="pb-4">
+                <p className={`font-bold text-sm ${item.done ? 'text-black' : 'text-black/30'}`}>{item.label}</p>
                 {item.date && (
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-black/50 font-medium mt-0.5">
                     {new Date(item.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 )}

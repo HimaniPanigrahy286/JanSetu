@@ -3,6 +3,8 @@ import { authService } from './services/authService';
 
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ContactUs from './pages/ContactUs';
 
 import CitizenLayout from './layouts/CitizenLayout';
 import GovernmentLayout from './layouts/GovernmentLayout';
@@ -35,6 +37,12 @@ function App() {
 
         {/* ================= LOGIN PAGE ================= */}
         <Route path="/login" element={<LoginPage />} />
+
+        {/* ================= REGISTER PAGE ================= */}
+        <Route path="/register" element={<RegisterPage />} />
+
+        {/* ================= CONTACT US PAGE ================= */}
+        <Route path="/contact" element={<ContactUs />} />
 
         {/* ================= CITIZEN ROUTES ================= */}
         <Route
