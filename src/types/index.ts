@@ -2,16 +2,19 @@ export type Role = 'citizen' | 'official';
 
 export type RequestStatus = 'pending' | 'under_review' | 'in_progress' | 'resolved' | 'rejected';
 export type Severity = 'low' | 'medium' | 'high' | 'critical';
+export type PriorityLevel = 'high' | 'medium' | 'low';
+
 export type Category =
   | 'Roads'
   | 'Water'
+  | 'Streetlights'
+  | 'Drainage'
+  | 'Public Transport'
+  | 'Schools & Hospitals'
   | 'Electricity'
-  | 'Healthcare'
-  | 'Education'
-  | 'Transport'
   | 'Sanitation'
   | 'Digital Infrastructure'
-  | 'Public Facilities';
+  | 'Other Development';
 
 export interface User {
   id: string;
@@ -21,6 +24,7 @@ export interface User {
   location: string;
   language: string;
   avatar?: string;
+  phone?: string;
 }
 
 export interface AIAnalysis {
@@ -33,22 +37,36 @@ export interface AIAnalysis {
   summary: string;
   confidence: number;
   keywords: string[];
+  duplicateClusterCount?: number;
+}
+
+export interface OfficialResponse {
+  message: string;
+  updatedAt: string;
+  officialName: string;
+  officialRole?: string;
+  estimatedResolution?: string;
 }
 
 export interface CitizenRequest {
   id: string;
   userId: string;
+  userName?: string;
   category: Category;
   description: string;
   location: string;
+  coordinates?: { lat: number; lng: number };
   language: string;
   imageUrl?: string;
   status: RequestStatus;
+  priority?: PriorityLevel;
+  affectedCount?: number;
   createdAt: string;
   updatedAt: string;
   aiAnalysis: AIAnalysis;
   isVoice?: boolean;
   voiceTranscription?: string;
+  officialResponse?: OfficialResponse;
 }
 
 export interface Region {
@@ -72,6 +90,24 @@ export interface Region {
   priorityScore: number;
   lat: number;
   lng: number;
+  topCategory?: Category;
+  resolvedCount?: number;
+}
+
+export interface Hotspot {
+  id: string;
+  name: string;
+  region: string;
+  category: Category;
+  requestCount: number;
+  affectedPopulation: number;
+  priority: PriorityLevel;
+  lat: number;
+  lng: number;
+  radius: number; // in meters for map visualizer
+  severityScore: number;
+  trend: string;
+  summary: string;
 }
 
 export interface Project {
@@ -79,11 +115,15 @@ export interface Project {
   title: string;
   category: Category;
   region: string;
-  status: 'planning' | 'in_progress' | 'completed' | 'on_hold';
+  status: 'proposed' | 'planning' | 'in_progress' | 'completed' | 'on_hold';
   budget: number;
   startDate: string;
   completionDate: string;
   requestsAddressed: number;
+  affectedPopulation?: number;
+  priority?: PriorityLevel;
+  estimatedImpact?: 'High' | 'Medium' | 'Critical';
+  progress?: number;
   description: string;
   beforeRequests?: number;
   afterRequests?: number;
@@ -100,6 +140,7 @@ export interface AIRecommendation {
   infrastructureCondition: 'very_low' | 'low' | 'medium' | 'high';
   existingInvestment: number;
   priorityScore: number;
+  priorityLevel?: PriorityLevel;
   recommendation: string;
   reasons: string[];
   category: Category;
@@ -113,4 +154,15 @@ export interface DataSource {
   lastUpdated: string;
   recordCount: number;
   icon: string;
+  status?: string;
+}
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  type: 'info' | 'success' | 'warning' | 'alert';
+  link?: string;
 }

@@ -1,163 +1,248 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { PlusCircle, Mic, ArrowRight, Clock, CheckCircle, AlertCircle, FileText, MapPin, Sparkles } from 'lucide-react';
 import { authService } from '../../services/authService';
 import { requestService } from '../../services/requestService';
-
-const CATEGORY_ICONS: Record<string, string> = {
-  Roads: '🛣️',
-  Water: '💧',
-  Electricity: '⚡',
-  Healthcare: '🏥',
-  Education: '🏫',
-  Transport: '🚌',
-  Sanitation: '🗑️',
-  'Digital Infrastructure': '📡',
-  'Public Facilities': '🏛️',
-};
-
-const STATUS_CONFIG: Record<string, { label: string; bg: string; border: string; text: string }> = {
-  pending: { label: 'Pending', bg: 'bg-brand-yellow', border: 'border-black', text: 'text-black' },
-  under_review: { label: 'Under Review', bg: 'bg-brand-sage', border: 'border-black', text: 'text-black' },
-  in_progress: { label: 'In Progress', bg: 'bg-black', border: 'border-black', text: 'text-brand-yellow' },
-  resolved: { label: 'Resolved', bg: 'bg-white', border: 'border-green-600', text: 'text-green-700' },
-  rejected: { label: 'Rejected', bg: 'bg-red-100', border: 'border-red-600', text: 'text-red-700' },
-};
+import StatCard from '../../components/common/StatCard';
+import StatusBadge from '../../components/common/StatusBadge';
+import CategoryBadge from '../../components/common/CategoryBadge';
 
 export default function CitizenDashboard() {
-  const user = authService.getCurrentUser()!;
+  const navigate = useNavigate();
+  const user = authService.getCurrentUser() || {
+    id: 'u1',
+    name: 'Priya Sharma',
+    email: 'citizen@demo.com',
+    role: 'citizen',
+    location: 'Bhubaneswar, Odisha',
+    language: 'Odia',
+  };
+
   const stats = requestService.getStats(user.id);
-  const recentRequests = requestService.getByUserId(user.id).slice(0, 3);
+  const myRequests = requestService.getByUserId(user.id);
+  const recentRequests = myRequests.slice(0, 4);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
-  const statCards = [
-    { label: 'Total Submitted', value: stats.total, bg: 'bg-brand-yellow', note: 'All your requests' },
-    { label: 'Under Review', value: stats.underReview, bg: 'bg-brand-sage', note: 'Being assessed' },
-    { label: 'In Progress', value: stats.inProgress, bg: 'bg-black text-white', note: 'Action started', textClass: 'text-white' },
-    { label: 'Resolved', value: stats.resolved, bg: 'bg-white', note: 'Successfully closed' },
-  ];
-
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
-      <div className="bg-brand-yellow card-brutal-lg rounded-2xl p-6 relative overflow-hidden">
-        <div className="relative z-10">
-          <p className="font-bold text-xs uppercase tracking-widest text-black/60">{greeting},</p>
-          <h2 className="font-heading font-extrabold text-3xl md:text-4xl mt-1">{user.name} 👋</h2>
-          <div className="flex flex-wrap items-center gap-3 mt-3">
-            <span className="px-3 py-1 bg-white border-2 border-black rounded-full text-xs font-bold shadow-brutal-sm">
-              📍 {user.location}
-            </span>
-            <span className="px-3 py-1 bg-white border-2 border-black rounded-full text-xs font-bold shadow-brutal-sm">
-              🌐 {user.language}
-            </span>
-            <span className="px-3 py-1 bg-black text-brand-yellow border-2 border-black rounded-full text-xs font-bold">
-              ● Citizen Portal Active
-            </span>
-          </div>
+      <div className="bg-brand-yellow card-brutal-lg rounded-3xl p-6 md:p-8 relative overflow-hidden">
+        {/* Background Graphic Accent */}
+        <div className="absolute right-4 -bottom-6 opacity-10 pointer-events-none hidden md:block">
+          <span className="font-heading font-extrabold text-9xl">JANSETU</span>
         </div>
-      </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {statCards.map(card => (
-          <div key={card.label} className={`${card.bg} card-brutal rounded-2xl p-5 text-center`}>
-            <p className={`font-heading font-extrabold text-4xl ${card.textClass ?? 'text-black'}`}>{card.value}</p>
-            <p className={`font-bold text-xs uppercase tracking-wider mt-1 ${card.textClass ?? 'text-black'}`}>{card.label}</p>
-            <p className={`text-xs mt-1 ${card.textClass ? 'text-white/60' : 'text-black/50'}`}>{card.note}</p>
+        <div className="relative z-10 space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border-2 border-black rounded-full shadow-brutal-sm text-xs font-extrabold uppercase tracking-wider">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+            Citizen Infrastructure Dashboard
           </div>
-        ))}
-      </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Link to="/citizen/submit" className="p-6 bg-white card-brutal rounded-2xl flex flex-col gap-3 hover:bg-brand-yellow transition-colors group">
-          <div className="w-12 h-12 bg-brand-yellow border-2 border-black rounded-xl flex items-center justify-center text-2xl group-hover:bg-white transition-colors">
-            ➕
-          </div>
           <div>
-            <h3 className="font-heading font-extrabold text-xl">Submit Request</h3>
-            <p className="text-sm font-medium text-black/60 mt-1">Report a new infrastructure complaint in your area.</p>
+            <p className="font-bold text-xs uppercase tracking-widest text-black/70">{greeting},</p>
+            <h1 className="font-heading font-extrabold text-3xl md:text-5xl tracking-tight text-black mt-0.5">
+              {user.name} 👋
+            </h1>
           </div>
-          <span className="font-bold text-xs uppercase tracking-widest mt-auto">File Complaint →</span>
-        </Link>
 
-        <Link to="/citizen/voice" className="p-6 bg-white card-brutal rounded-2xl flex flex-col gap-3 hover:bg-brand-sage transition-colors group">
-          <div className="w-12 h-12 bg-brand-sage border-2 border-black rounded-xl flex items-center justify-center text-2xl group-hover:bg-white transition-colors">
-            🎤
-          </div>
-          <div>
-            <h3 className="font-heading font-extrabold text-xl">Voice Input</h3>
-            <p className="text-sm font-medium text-black/60 mt-1">Speak in your regional language — Odia, Hindi, Tamil and more.</p>
-          </div>
-          <span className="font-bold text-xs uppercase tracking-widest mt-auto">Start Recording →</span>
-        </Link>
-
-        <Link to="/citizen/requests" className="p-6 bg-white card-brutal rounded-2xl flex flex-col gap-3 hover:bg-black group transition-colors">
-          <div className="w-12 h-12 bg-black border-2 border-black rounded-xl flex items-center justify-center text-2xl group-hover:bg-brand-yellow transition-colors">
-            📋
-          </div>
-          <div>
-            <h3 className="font-heading font-extrabold text-xl group-hover:text-white transition-colors">My Requests</h3>
-            <p className="text-sm font-medium text-black/60 mt-1 group-hover:text-white/60 transition-colors">View all your submitted requests and their statuses.</p>
-          </div>
-          <span className="font-bold text-xs uppercase tracking-widest mt-auto group-hover:text-white transition-colors">View All →</span>
-        </Link>
-      </div>
-
-      {/* Recent Requests */}
-      {recentRequests.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-heading font-extrabold text-xl">Recent Requests</h3>
-            <Link to="/citizen/requests" className="font-bold text-xs uppercase tracking-widest hover:underline decoration-2">
-              View All →
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {recentRequests.map(req => {
-              const sc = STATUS_CONFIG[req.status];
-              return (
-                <div key={req.id} className="bg-white card-brutal rounded-xl p-4 flex items-center gap-4">
-                  <div className="w-10 h-10 bg-brand-sage border-2 border-black rounded-lg flex items-center justify-center text-xl shrink-0">
-                    {CATEGORY_ICONS[req.category] ?? '📌'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm truncate">{req.aiAnalysis.summary || req.description.slice(0, 60) + '...'}</p>
-                    <p className="text-xs text-black/50 font-medium mt-0.5">
-                      {req.category} &bull; {req.location} &bull; {new Date(req.createdAt).toLocaleDateString('en-IN')}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className={`px-2.5 py-1 ${sc.bg} ${sc.text} border-2 ${sc.border} rounded-lg text-[10px] font-extrabold uppercase tracking-wider`}>
-                      {sc.label}
-                    </span>
-                    <Link
-                      to={`/citizen/requests/${req.id}`}
-                      className="btn-brutal-secondary px-3 py-1.5 text-xs font-bold rounded-lg"
-                    >
-                      Track →
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {recentRequests.length === 0 && (
-        <div className="bg-white card-brutal rounded-2xl p-10 text-center">
-          <div className="text-5xl mb-4">📭</div>
-          <h3 className="font-heading font-extrabold text-2xl">No Requests Yet</h3>
-          <p className="font-medium text-sm text-black/60 mt-2 max-w-sm mx-auto">
-            You haven't submitted any infrastructure requests yet. Start by filing your first complaint.
+          <p className="text-sm md:text-base font-medium text-black/80 max-w-2xl leading-relaxed">
+            Report infrastructure defects, track public works in your ward, and voice local development priorities directly to government authorities.
           </p>
-          <Link to="/citizen/submit" className="btn-brutal-primary mt-6 px-8 py-3 rounded-xl font-extrabold inline-flex items-center gap-2">
-            Submit First Request →
+
+          <div className="flex flex-wrap items-center gap-2.5 pt-2">
+            <span className="px-3 py-1.5 bg-white border-2 border-black rounded-xl text-xs font-extrabold shadow-brutal-sm flex items-center gap-1.5">
+              <MapPin size={13} className="text-red-500" />
+              {user.location}
+            </span>
+            <span className="px-3 py-1.5 bg-white border-2 border-black rounded-xl text-xs font-extrabold shadow-brutal-sm">
+              🌐 Dialect: {user.language}
+            </span>
+            <span className="px-3 py-1.5 bg-black text-brand-yellow border-2 border-black rounded-xl text-xs font-extrabold flex items-center gap-1.5">
+              <Sparkles size={13} />
+              AI Prioritization Active
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="Total Requests"
+          value={stats.total}
+          subtext="All logged grievances"
+          icon={<FileText size={20} />}
+          variant="yellow"
+        />
+        <StatCard
+          label="Under Review"
+          value={stats.underReview}
+          subtext="Assessing by engineers"
+          icon={<Clock size={20} />}
+          variant="sage"
+        />
+        <StatCard
+          label="In Progress"
+          value={stats.inProgress}
+          subtext="Work order sanctioned"
+          icon={<AlertCircle size={20} />}
+          variant="dark"
+        />
+        <StatCard
+          label="Resolved"
+          value={stats.resolved}
+          subtext="Successfully verified"
+          icon={<CheckCircle size={20} />}
+          variant="white"
+        />
+      </div>
+
+      {/* Quick Action Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Submit Request */}
+        <Link
+          to="/citizen/submit"
+          className="p-6 bg-white card-brutal-lg rounded-2xl flex flex-col justify-between hover:bg-brand-yellow transition-all group cursor-pointer"
+        >
+          <div className="space-y-3">
+            <div className="w-13 h-13 bg-brand-yellow border-2 border-black rounded-2xl flex items-center justify-center text-2xl shadow-brutal-sm group-hover:bg-white transition-colors">
+              <PlusCircle size={28} className="text-black" />
+            </div>
+            <div>
+              <h3 className="font-heading font-extrabold text-2xl leading-tight">Submit New Request</h3>
+              <p className="text-xs font-bold text-black/60 mt-1">
+                Report broken roads, dry water taps, leaking drains, or school defects with photos and location.
+              </p>
+            </div>
+          </div>
+          <div className="pt-5 flex items-center gap-2 font-heading font-extrabold text-sm uppercase tracking-wider group-hover:translate-x-1 transition-transform">
+            <span>File Grievance</span>
+            <ArrowRight size={16} />
+          </div>
+        </Link>
+
+        {/* Voice Input */}
+        <Link
+          to="/citizen/voice"
+          className="p-6 bg-white card-brutal-lg rounded-2xl flex flex-col justify-between hover:bg-brand-sage transition-all group cursor-pointer"
+        >
+          <div className="space-y-3">
+            <div className="w-13 h-13 bg-brand-sage border-2 border-black rounded-2xl flex items-center justify-center text-2xl shadow-brutal-sm group-hover:bg-white transition-colors">
+              <Mic size={28} className="text-black" />
+            </div>
+            <div>
+              <h3 className="font-heading font-extrabold text-2xl leading-tight">Voice Submission</h3>
+              <p className="text-xs font-bold text-black/60 mt-1">
+                Speak directly in your native dialect — Odia, Hindi, Bengali, Tamil, Telugu, or English.
+              </p>
+            </div>
+          </div>
+          <div className="pt-5 flex items-center gap-2 font-heading font-extrabold text-sm uppercase tracking-wider group-hover:translate-x-1 transition-transform">
+            <span>Record Voice</span>
+            <ArrowRight size={16} />
+          </div>
+        </Link>
+
+        {/* Track Requests */}
+        <Link
+          to="/citizen/requests"
+          className="p-6 bg-brand-charcoal text-white card-brutal-lg rounded-2xl flex flex-col justify-between hover:bg-black transition-all group cursor-pointer"
+        >
+          <div className="space-y-3">
+            <div className="w-13 h-13 bg-brand-yellow text-black border-2 border-brand-yellow rounded-2xl flex items-center justify-center text-2xl shadow-brutal-sm">
+              <CheckCircle size={28} />
+            </div>
+            <div>
+              <h3 className="font-heading font-extrabold text-2xl leading-tight text-brand-yellow">
+                Track Status & History
+              </h3>
+              <p className="text-xs font-bold text-brand-sage mt-1">
+                Monitor 4-stage lifecycle milestones, engineering updates, and resolution approvals.
+              </p>
+            </div>
+          </div>
+          <div className="pt-5 flex items-center gap-2 font-heading font-extrabold text-sm uppercase tracking-wider text-brand-yellow group-hover:translate-x-1 transition-transform">
+            <span>View All ({stats.total})</span>
+            <ArrowRight size={16} />
+          </div>
+        </Link>
+      </div>
+
+      {/* Recent Requests Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-heading font-extrabold text-2xl">MY RECENT REQUESTS</h2>
+            <p className="text-xs font-bold text-black/60">Live status updates from municipal authorities</p>
+          </div>
+          <Link
+            to="/citizen/requests"
+            className="btn-brutal-secondary px-4 py-2 rounded-xl text-xs font-extrabold inline-flex items-center gap-1.5"
+          >
+            <span>View All Requests</span>
+            <ArrowRight size={14} />
           </Link>
         </div>
-      )}
+
+        {recentRequests.length === 0 ? (
+          <div className="bg-white card-brutal-lg rounded-2xl p-12 text-center space-y-4">
+            <div className="text-5xl">📭</div>
+            <div>
+              <h3 className="font-heading font-extrabold text-2xl">No Requests Submitted Yet</h3>
+              <p className="text-xs font-bold text-black/60 max-w-sm mx-auto mt-1">
+                You haven't logged any infrastructure grievances. Start by reporting your first civic issue.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/citizen/submit')}
+              className="btn-brutal-primary px-6 py-3 rounded-xl text-xs font-extrabold"
+            >
+              Submit First Request &rarr;
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {recentRequests.map(req => (
+              <div
+                key={req.id}
+                className="bg-white card-brutal rounded-2xl p-5 flex flex-col justify-between hover:border-black transition-all space-y-3"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <CategoryBadge category={req.category} size="md" />
+                    <StatusBadge status={req.status} size="sm" />
+                  </div>
+
+                  <p className="font-bold text-sm text-black line-clamp-2 leading-snug">
+                    {req.aiAnalysis.summary || req.description}
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5 text-xs text-black/60 font-bold">
+                    <span className="flex items-center gap-1">
+                      <MapPin size={11} className="text-red-500" />
+                      {req.location}
+                    </span>
+                    <span>•</span>
+                    <span>{new Date(req.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t-2 border-black/10 flex items-center justify-between gap-2">
+                  <span className="font-mono text-[10px] font-extrabold text-black/50">{req.id}</span>
+                  <Link
+                    to={`/citizen/requests/${req.id}`}
+                    className="btn-brutal-primary px-3.5 py-1.5 text-xs font-extrabold rounded-lg inline-flex items-center gap-1"
+                  >
+                    <span>Track Status</span>
+                    <ArrowRight size={12} />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,5 +1,11 @@
-import { MOCK_REGIONS, ANALYTICS_REQUESTS_OVER_TIME, ANALYTICS_BY_CATEGORY, ANALYTICS_SEVERITY } from '../data/mockData';
-import type { Region } from '../types';
+import {
+  MOCK_REGIONS,
+  MOCK_HOTSPOTS,
+  ANALYTICS_REQUESTS_OVER_TIME,
+  ANALYTICS_BY_CATEGORY,
+  ANALYTICS_SEVERITY,
+} from '../data/mockData';
+import type { Region, Hotspot } from '../types';
 
 export const analyticsService = {
   getRegions(): Region[] {
@@ -18,9 +24,15 @@ export const analyticsService = {
   getOverviewStats() {
     return {
       totalRequests: 12458,
+      pendingRequests: 4231,
+      inProgressRequests: 2335,
+      resolvedRequests: 5892,
       highPriorityAreas: 27,
       infrastructureGap: 67,
-      resolvedRequests: 4892,
+      serviceLevelRate: 76.5,
+      feedbackRating: 4.6,
+      citizensBenefited: 24580,
+      projectsCompleted: 36,
     };
   },
 
@@ -36,10 +48,12 @@ export const analyticsService = {
     return ANALYTICS_SEVERITY;
   },
 
-  getHotspots() {
-    return MOCK_REGIONS
-      .slice(0, 6)
-      .sort((a, b) => b.priorityScore - a.priorityScore);
+  getHotspots(): Hotspot[] {
+    return MOCK_HOTSPOTS;
+  },
+
+  getHotspotById(id: string): Hotspot | undefined {
+    return MOCK_HOTSPOTS.find(h => h.id === id);
   },
 
   getCountries(): string[] {

@@ -25,13 +25,28 @@ import Projects from './pages/government/Projects';
 import Impact from './pages/government/Impact';
 import DataSources from './pages/government/DataSources';
 
-function App() {
+// Protected Route Guard for Citizen
+function CitizenRouteGuard({ children }: { children: React.ReactNode }) {
   const user = authService.getCurrentUser();
+  if (!user || user.role !== 'citizen') {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+}
 
+// Protected Route Guard for Government Official
+function GovernmentRouteGuard({ children }: { children: React.ReactNode }) {
+  const user = authService.getCurrentUser();
+  if (!user || user.role !== 'official') {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+}
+
+function App() {
   return (
     <BrowserRouter>
       <Routes>
-
         {/* ================= LANDING PAGE ================= */}
         <Route path="/" element={<LandingPage />} />
 
@@ -48,11 +63,9 @@ function App() {
         <Route
           path="/citizen"
           element={
-            user?.role === 'citizen' ? (
+            <CitizenRouteGuard>
               <CitizenLayout />
-            ) : (
-              <Navigate to="/login" replace />
-            )
+            </CitizenRouteGuard>
           }
         >
           <Route index element={<CitizenDashboard />} />
@@ -60,6 +73,8 @@ function App() {
           <Route path="submit" element={<SubmitRequest />} />
           <Route path="voice" element={<VoiceRequest />} />
           <Route path="requests" element={<MyRequests />} />
+          <Route path="track" element={<MyRequests />} />
+          <Route path="history" element={<MyRequests />} />
           <Route path="requests/:id" element={<RequestDetails />} />
           <Route path="profile" element={<CitizenProfile />} />
         </Route>
@@ -68,11 +83,9 @@ function App() {
         <Route
           path="/government"
           element={
-            user?.role === 'official' ? (
+            <GovernmentRouteGuard>
               <GovernmentLayout />
-            ) : (
-              <Navigate to="/login" replace />
-            )
+            </GovernmentRouteGuard>
           }
         >
           <Route index element={<GovOverview />} />
@@ -82,6 +95,7 @@ function App() {
           <Route path="regions" element={<Regions />} />
           <Route path="regions/:id" element={<Regions />} />
           <Route path="recommendations" element={<AIRecommendations />} />
+          <Route path="priority" element={<AIRecommendations />} />
           <Route path="projects" element={<Projects />} />
           <Route path="impact" element={<Impact />} />
           <Route path="datasources" element={<DataSources />} />
@@ -89,7 +103,6 @@ function App() {
 
         {/* ================= UNKNOWN URL ================= */}
         <Route path="*" element={<Navigate to="/" replace />} />
-
       </Routes>
     </BrowserRouter>
   );
