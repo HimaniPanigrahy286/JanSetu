@@ -6,7 +6,6 @@ import {
   MapPin,
   Award,
   FolderKanban,
-  Activity,
   Database,
   Bell,
   Search,
@@ -14,6 +13,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Globe,
+  UserCheck,
+  Building,
+  BarChart3,
+  TrendingUp,
 } from 'lucide-react';
 import { authService } from '../services/authService';
 import { MOCK_NOTIFICATIONS } from '../data/mockData';
@@ -27,9 +30,24 @@ const navItems = [
     icon: <LayoutDashboard size={18} />,
   },
   {
+    to: '/government/my-requests',
+    label: 'My Requests',
+    icon: <UserCheck size={18} />,
+  },
+  {
+    to: '/government/department-requests',
+    label: 'Department Requests',
+    icon: <Building size={18} />,
+  },
+  {
     to: '/government/requests',
-    label: 'All Citizen Requests',
+    label: 'All Requests',
     icon: <Table size={18} />,
+  },
+  {
+    to: '/government/analytics',
+    label: 'Analytics & SLA',
+    icon: <BarChart3 size={18} />,
   },
   {
     to: '/government/hotspots',
@@ -43,7 +61,7 @@ const navItems = [
   },
   {
     to: '/government/recommendations',
-    label: 'Priority Ranking',
+    label: 'AI Recommendations',
     icon: <Award size={18} />,
   },
   {
@@ -54,7 +72,7 @@ const navItems = [
   {
     to: '/government/impact',
     label: 'Impact Dashboard',
-    icon: <Activity size={18} />,
+    icon: <TrendingUp size={18} />,
   },
   {
     to: '/government/datasources',
@@ -65,13 +83,18 @@ const navItems = [
 
 export default function GovernmentLayout() {
   const navigate = useNavigate();
-  const user = authService.getCurrentUser() || {
-    id: 'u2',
-    name: 'Rajiv Mehta',
-    email: 'official@demo.com',
-    role: 'official',
-    location: 'Bhubaneswar, Odisha',
-    language: 'English',
+  const rawUser = authService.getCurrentUser();
+  const user = {
+    id: rawUser?.id || 'gov-user',
+    name: rawUser?.name || 'Government Official',
+    email: rawUser?.email || '',
+    role: rawUser?.role || 'official',
+    department: rawUser?.department || 'Public Works & Governance',
+    designation: rawUser?.designation || 'Government Officer',
+    organization: rawUser?.organization || (rawUser?.designation && rawUser?.department ? `${rawUser.designation} • ${rawUser.department}` : 'Public Administration'),
+    location: rawUser?.location || rawUser?.district || 'Odisha Jurisdiction',
+    district: rawUser?.district || 'State Jurisdiction',
+    language: rawUser?.language || 'English',
   };
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -92,6 +115,16 @@ export default function GovernmentLayout() {
       navigate(`/government/requests?search=${encodeURIComponent(globalSearch.trim())}`);
     }
   };
+
+  const getInitials = (nameStr: string) => {
+    if (!nameStr) return 'GO';
+    const parts = nameStr.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+    }
+    return nameStr.slice(0, 2).toUpperCase() || 'GO';
+  };
+  const initials = getInitials(user.name);
 
   return (
     <div className="min-h-screen flex font-body bg-gray-100 text-black">
@@ -154,11 +187,13 @@ export default function GovernmentLayout() {
           {sidebarOpen && (
             <div className="flex items-center gap-2.5 p-2 bg-white/10 border border-white/20 rounded-xl">
               <div className="w-8 h-8 bg-brand-yellow text-black border border-black rounded-lg flex items-center justify-center font-heading font-extrabold text-sm shrink-0">
-                {user.name.charAt(0)}
+                {initials}
               </div>
               <div className="overflow-hidden leading-tight">
                 <p className="text-white font-extrabold text-xs truncate">{user.name}</p>
-                <p className="text-brand-yellow text-[10px] font-bold truncate">Divya Prasad / MP Admin</p>
+                <p className="text-brand-yellow text-[10px] font-bold truncate">
+                  {user.organization || 'MP Official Admin'}
+                </p>
               </div>
             </div>
           )}
@@ -178,7 +213,7 @@ export default function GovernmentLayout() {
 
       {/* Main Content Workspace */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Intelligence Header Bar (inspired by reference dashboard) */}
+        {/* Top Intelligence Header Bar */}
         <header className="h-18 bg-white border-b-2 border-black px-6 flex items-center justify-between gap-4 sticky top-0 z-20">
           {/* Global Search */}
           <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md hidden sm:block">
@@ -214,14 +249,16 @@ export default function GovernmentLayout() {
               )}
             </button>
 
-            {/* Official Profile Badge (Reference screenshot match: Divya Prasad / Admin) */}
+            {/* Official Profile Badge - displays logged in user's name & initials */}
             <div className="flex items-center gap-2.5 pl-2 border-l-2 border-black/20">
               <div className="w-9 h-9 bg-brand-yellow border-2 border-black rounded-xl flex items-center justify-center font-heading font-extrabold text-sm shadow-brutal-sm">
-                DP
+                {initials}
               </div>
               <div className="hidden md:block leading-none text-left">
-                <p className="font-heading font-extrabold text-xs">Divya Prasad</p>
-                <p className="text-[10px] font-bold text-black/60 uppercase tracking-wider mt-0.5">MP Official Admin</p>
+                <p className="font-heading font-extrabold text-xs">{user.name}</p>
+                <p className="text-[10px] font-bold text-black/60 uppercase tracking-wider mt-0.5">
+                  {user.organization || 'MP Official Admin'}
+                </p>
               </div>
             </div>
           </div>

@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { authService } from './services/authService';
 
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
@@ -17,6 +16,9 @@ import RequestDetails from './pages/citizen/RequestDetails';
 import CitizenProfile from './pages/citizen/CitizenProfile';
 
 import GovOverview from './pages/government/GovOverview';
+import MyRequestsGov from './pages/government/MyRequestsGov';
+import DepartmentRequests from './pages/government/DepartmentRequests';
+import GovAnalytics from './pages/government/GovAnalytics';
 import GovRequests from './pages/government/GovRequests';
 import DemandHotspots from './pages/government/DemandHotspots';
 import Regions from './pages/government/Regions';
@@ -25,23 +27,7 @@ import Projects from './pages/government/Projects';
 import Impact from './pages/government/Impact';
 import DataSources from './pages/government/DataSources';
 
-// Protected Route Guard for Citizen
-function CitizenRouteGuard({ children }: { children: React.ReactNode }) {
-  const user = authService.getCurrentUser();
-  if (!user || user.role !== 'citizen') {
-    return <Navigate to="/login" replace />;
-  }
-  return <>{children}</>;
-}
-
-// Protected Route Guard for Government Official
-function GovernmentRouteGuard({ children }: { children: React.ReactNode }) {
-  const user = authService.getCurrentUser();
-  if (!user || user.role !== 'official') {
-    return <Navigate to="/login" replace />;
-  }
-  return <>{children}</>;
-}
+import ProtectedRoute from './components/common/ProtectedRoute';
 
 function App() {
   return (
@@ -63,9 +49,9 @@ function App() {
         <Route
           path="/citizen"
           element={
-            <CitizenRouteGuard>
+            <ProtectedRoute portal="citizen">
               <CitizenLayout />
-            </CitizenRouteGuard>
+            </ProtectedRoute>
           }
         >
           <Route index element={<CitizenDashboard />} />
@@ -83,13 +69,16 @@ function App() {
         <Route
           path="/government"
           element={
-            <GovernmentRouteGuard>
+            <ProtectedRoute portal="government">
               <GovernmentLayout />
-            </GovernmentRouteGuard>
+            </ProtectedRoute>
           }
         >
           <Route index element={<GovOverview />} />
           <Route path="overview" element={<GovOverview />} />
+          <Route path="my-requests" element={<MyRequestsGov />} />
+          <Route path="department-requests" element={<DepartmentRequests />} />
+          <Route path="analytics" element={<GovAnalytics />} />
           <Route path="requests" element={<GovRequests />} />
           <Route path="hotspots" element={<DemandHotspots />} />
           <Route path="regions" element={<Regions />} />

@@ -1,6 +1,6 @@
-export type Role = 'citizen' | 'official';
+export type Role = 'citizen' | 'government' | 'official';
 
-export type RequestStatus = 'pending' | 'under_review' | 'in_progress' | 'resolved' | 'rejected';
+export type RequestStatus = 'pending' | 'new' | 'assigned' | 'under_review' | 'in_progress' | 'resolved' | 'rejected';
 export type Severity = 'low' | 'medium' | 'high' | 'critical';
 export type PriorityLevel = 'high' | 'medium' | 'low';
 
@@ -25,8 +25,15 @@ export interface User {
   language: string;
   avatar?: string;
   phone?: string;
+  mobile?: string;
   bio?: string;
   organization?: string;
+  // Government Employee Profile Fields
+  employeeId?: string;
+  department?: string;
+  designation?: string;
+  state?: string;
+  district?: string;
 }
 
 export interface AIAnalysis {
@@ -69,6 +76,12 @@ export interface CitizenRequest {
   isVoice?: boolean;
   voiceTranscription?: string;
   officialResponse?: OfficialResponse;
+  // Automatic routing fields: Category -> Department -> Region -> Officer
+  department?: string;
+  region?: string;
+  assignedOfficerId?: string;
+  assignedOfficerName?: string;
+  assignedOfficerDesignation?: string;
 }
 
 export interface Region {
@@ -168,3 +181,51 @@ export interface AppNotification {
   type: 'info' | 'success' | 'warning' | 'alert';
   link?: string;
 }
+
+export const CATEGORY_DEPARTMENT_MAP: Record<Category, string> = {
+  'Roads': 'Public Works Department (PWD)',
+  'Water': 'Water Resources & Public Health',
+  'Drainage': 'Urban Development & Sanitation',
+  'Streetlights': 'Energy & Power Infrastructure',
+  'Electricity': 'Energy & Power Infrastructure',
+  'Public Transport': 'Transport & Mobility Department',
+  'Schools & Hospitals': 'Health & Education Infrastructure',
+  'Sanitation': 'Urban Development & Sanitation',
+  'Digital Infrastructure': 'Electronics & IT Infrastructure',
+  'Other Development': 'Rural Development & Public Works',
+};
+
+export const DEPARTMENTS = [
+  'Public Works Department (PWD)',
+  'Water Resources & Public Health',
+  'Urban Development & Sanitation',
+  'Energy & Power Infrastructure',
+  'Transport & Mobility Department',
+  'Health & Education Infrastructure',
+  'Rural Development & Public Works',
+  'Electronics & IT Infrastructure',
+];
+
+export const DESIGNATIONS = [
+  'Junior Engineer / Field Officer',
+  'Assistant Executive Engineer (AEE)',
+  'Executive Engineer / District Head',
+  'Superintending Engineer / Regional Director',
+  'District Magistrate & Collector (DM)',
+  'Chief Engineer / State Secretariat Head',
+];
+
+export const DISTRICTS = [
+  'Kalahandi',
+  'Bhubaneswar',
+  'Koraput',
+  'Cuttack',
+  'Malkangiri',
+  'Rayagada',
+  'Nuapada',
+  'Sambalpur',
+  'Puri',
+  'Balasore',
+  'Ganjam',
+  'Mayurbhanj',
+];

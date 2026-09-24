@@ -1,5 +1,6 @@
 import { Database, CheckCircle, ArrowRight } from 'lucide-react';
 import { MOCK_DATA_SOURCES } from '../../data/mockData';
+import { useCitizenRequests } from '../../services/requestService';
 
 const PIPELINE_STEPS = [
   { label: 'Multilingual Ingestion', desc: 'Voice logs (Odia/Hindi), text grievances, field surveys', number: '01' },
@@ -10,6 +11,17 @@ const PIPELINE_STEPS = [
 ];
 
 export default function DataSources() {
+  const { requests } = useCitizenRequests();
+
+  const dataSources = MOCK_DATA_SOURCES.map(ds => {
+    if (ds.id === 'ds-1') {
+      return {
+        ...ds,
+        recordCount: requests.length,
+      };
+    }
+    return ds;
+  });
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -60,7 +72,7 @@ export default function DataSources() {
 
       {/* Data Source Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {MOCK_DATA_SOURCES.map(source => (
+        {dataSources.map(source => (
           <div key={source.id} className="bg-white card-brutal-lg rounded-3xl p-6 space-y-4 flex flex-col justify-between">
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-2">

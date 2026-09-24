@@ -82,6 +82,22 @@ export default function LoginPage() {
       }
 
       const cached = authService.getCurrentUser();
+      const userRole: Role = (profileData?.role as Role) || (cached?.email === email.trim() ? cached.role : role);
+
+      // Verify that registered role matches the login tab
+      const isCitizenRole = userRole === 'citizen';
+      const isLoggingInAsCitizen = role === 'citizen';
+
+      if (isCitizenRole && !isLoggingInAsCitizen) {
+        setError('Access Denied: This account is registered as a Citizen account and cannot access the Government Portal. Please switch to the Citizen tab.');
+        return;
+      }
+
+      if (!isCitizenRole && isLoggingInAsCitizen) {
+        setError('Access Denied: This account is registered as a Government account and cannot access the Citizen Portal. Please switch to the Government Official tab.');
+        return;
+      }
+
       const name = profileData?.name || (cached?.email === email.trim() ? cached.name : null) || userCredential.user.displayName || email.trim().split('@')[0];
       const location = profileData?.location || (cached?.email === email.trim() ? cached.location : null) || 'Odisha, India';
       const language = profileData?.language || (cached?.email === email.trim() ? cached.language : null) || 'English';
@@ -90,12 +106,12 @@ export default function LoginPage() {
       const bio = profileData?.bio || (cached?.email === email.trim() ? cached.bio : undefined);
       const organization = profileData?.organization || (cached?.email === email.trim() ? cached.organization : undefined);
 
-      // Save user session
+      // Save user session with fixed registered role
       authService.saveUser({
         id: uid,
         name,
         email: userCredential.user.email || email.trim(),
-        role: (profileData?.role as Role) || role,
+        role: userRole,
         location,
         language,
         avatar,
@@ -104,8 +120,8 @@ export default function LoginPage() {
         organization,
       });
 
-      // Login successful
-      if (role === 'citizen') {
+      // Login successful - navigate strictly based on role
+      if (userRole === 'citizen') {
         navigate('/citizen/dashboard');
       } else {
         navigate('/government/overview');

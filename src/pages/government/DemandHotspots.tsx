@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { analyticsService } from '../../services/analyticsService';
 import { projectService } from '../../services/projectService';
+import { useCitizenRequests } from '../../services/requestService';
 import MapHotspotsView from '../../components/common/MapHotspotsView';
 import PriorityBadge from '../../components/common/PriorityBadge';
 import CategoryBadge from '../../components/common/CategoryBadge';
@@ -15,9 +16,10 @@ import type { Hotspot } from '../../types';
 
 export default function DemandHotspots() {
   const navigate = useNavigate();
-  const allHotspots = analyticsService.getHotspots();
+  const { requests } = useCitizenRequests();
+  const allHotspots = analyticsService.getHotspots(requests);
 
-  const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(allHotspots[0]);
+  const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(() => allHotspots[0] || null);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [projectTitle, setProjectTitle] = useState('');
   const [projectBudget, setProjectBudget] = useState(25000000);

@@ -18,15 +18,17 @@ import {
   ArrowRightLeft,
 } from 'lucide-react';
 import { analyticsService } from '../../services/analyticsService';
+import { useCitizenRequests } from '../../services/requestService';
 import CategoryBadge from '../../components/common/CategoryBadge';
 
 export default function Regions() {
-  const allRegions = analyticsService.getRegions();
+  const { requests } = useCitizenRequests();
+  const allRegions = analyticsService.getRegions(requests);
   const countries = analyticsService.getCountries();
 
   const [selectedCountry, setSelectedCountry] = useState('All');
-  const [regionAId, setRegionAId] = useState<string>(allRegions[0].id);
-  const [regionBId, setRegionBId] = useState<string>(allRegions[1].id);
+  const [regionAId, setRegionAId] = useState<string>(() => allRegions[0]?.id || 'reg-1');
+  const [regionBId, setRegionBId] = useState<string>(() => allRegions[1]?.id || 'reg-2');
   const [compareMode, setCompareMode] = useState(true);
 
   const filteredRegions = selectedCountry === 'All' ? allRegions : allRegions.filter(r => r.country === selectedCountry);

@@ -9,7 +9,8 @@ import {
   Sparkles,
   ArrowUpDown,
 } from 'lucide-react';
-import { requestService } from '../../services/requestService';
+import { requestService, useCitizenRequests } from '../../services/requestService';
+import { authService } from '../../services/authService';
 import StatusBadge from '../../components/common/StatusBadge';
 import PriorityBadge from '../../components/common/PriorityBadge';
 import CategoryBadge from '../../components/common/CategoryBadge';
@@ -19,7 +20,7 @@ export default function GovRequests() {
   const [searchParams] = useSearchParams();
   const initialSearch = searchParams.get('search') || '';
 
-  const [requests, setRequests] = useState<CitizenRequest[]>(() => requestService.getAll());
+  const { requests, loading } = useCitizenRequests();
   const [search, setSearch] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState<RequestStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
@@ -35,11 +36,6 @@ export default function GovRequests() {
   const [updating, setUpdating] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
 
-  const loadData = () => {
-    const all = requestService.getAll();
-    setRequests(all);
-  };
-
   const handleOpenModal = (req: CitizenRequest) => {
     setSelectedReq(req);
     setNewStatus(req.status);
@@ -53,11 +49,12 @@ export default function GovRequests() {
     setUpdating(true);
 
     setTimeout(() => {
+      const currentUser = authService.getCurrentUser();
       const updated = requestService.updateStatus(selectedReq.id, newStatus, {
-        message: officialNote.trim() || `Status updated to ${newStatus.replace('_', ' ').toUpperCase()} by MP Operations Wing.`,
+        message: officialNote.trim() || `Status updated to ${newStatus.replace('_', ' ').toUpperCase()} by ${currentUser?.name || 'Department Officer'}.`,
         updatedAt: new Date().toISOString(),
-        officialName: 'Divya Prasad / Rajiv Mehta',
-        officialRole: 'MP Special Duty Officer / PWD Liaison',
+        officialName: currentUser?.name || 'Government Official',
+        officialRole: currentUser?.organization || (currentUser?.designation && currentUser?.department ? `${currentUser.designation} • ${currentUser.department}` : 'Authorized Department Official'),
         estimatedResolution: resolutionDate,
       });
 
@@ -65,7 +62,6 @@ export default function GovRequests() {
       setUpdateSuccess(true);
       if (updated) {
         setSelectedReq(updated);
-        loadData();
       }
     }, 600);
   };
@@ -109,8 +105,15 @@ export default function GovRequests() {
             Centralized triage queue with live status dispatch and explainable NLP diagnostics.
           </p>
         </div>
-        <div className="flex items-center gap-2 font-mono font-extrabold text-xs bg-black text-brand-yellow px-4 py-2 rounded-xl shadow-brutal-sm">
-          <span>Total Records: {filtered.length}</span>
+        <div className="flex items-center gap-3">
+          {loading && (
+            <span className="px-3 py-1.5 bg-black text-brand-yellow rounded-xl text-xs font-mono font-bold animate-pulse">
+              Syncing Live Data...
+            </span>
+          )}
+          <div className="flex items-center gap-2 font-mono font-extrabold text-xs bg-black text-brand-yellow px-4 py-2 rounded-xl shadow-brutal-sm">
+            <span>Total Records: {filtered.length}</span>
+          </div>
         </div>
       </div>
 

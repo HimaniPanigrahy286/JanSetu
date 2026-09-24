@@ -1,3 +1,15 @@
+import { useEffect, useState } from 'react';
+import {
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+  onSnapshot,
+} from 'firebase/firestore';
+import { db } from '../firebase';
+import {
+  CATEGORY_DEPARTMENT_MAP,
+} from '../types';
 import type {
   CitizenRequest,
   Category,
@@ -5,41 +17,250 @@ import type {
   AIAnalysis,
   OfficialResponse,
   PriorityLevel,
+  User,
 } from '../types';
 import { MOCK_REQUESTS } from '../data/mockData';
 
 const STORAGE_KEY = 'jansetu_requests_store';
+type RequestListener = (requests: CitizenRequest[]) => void;
 
-function loadRequests(): CitizenRequest[] {
+const listeners: Set<RequestListener> = new Set();
+let isFirestoreListenerActive = false;
+
+function normalizeRequest(req: any): CitizenRequest {
+  const category = (req.category || 'Roads') as Category;
+  const dept = req.department || CATEGORY_DEPARTMENT_MAP[category] || 'Public Works Department (PWD)';
+  const region = req.region || (req.location ? req.location.split(',')[0].trim() : 'Kalahandi');
+
+  return {
+    ...req,
+    category,
+    department: dept,
+    region,
+    status: req.status || 'pending',
+  };
+}
+
+function loadRequestsFromLocal(): CitizenRequest[] {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_REQUESTS));
-    return [...MOCK_REQUESTS];
+    const initialized = MOCK_REQUESTS.map(normalizeRequest);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(initialized));
+    return initialized;
   }
   try {
-    return JSON.parse(raw) as CitizenRequest[];
+    const parsed = JSON.parse(raw) as CitizenRequest[];
+    return parsed.map(normalizeRequest);
   } catch {
-    return [...MOCK_REQUESTS];
+    return MOCK_REQUESTS.map(normalizeRequest);
   }
 }
 
-function saveRequests(requests: CitizenRequest[]): void {
+function saveRequestsToLocal(requests: CitizenRequest[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
 }
 
+let inMemoryRequests: CitizenRequest[] = loadRequestsFromLocal();
+
+function notifyListeners() {
+  const current = [...inMemoryRequests];
+  listeners.forEach(listener => {
+    try {
+      listener(current);
+    } catch (e) {
+      console.error('Error in request listener:', e);
+    }
+  });
+}
+
 export const requestService = {
+  /**
+   * Check if a government officer is senior (District / Regional / State scope)
+   */
+  isSeniorOfficer(user?: User | null): boolean {
+    if (!user) return false;
+    const des = (user.designation || user.organization || '').toLowerCase();
+    return (
+      des.includes('executive') ||
+      des.includes('superintending') ||
+      des.includes('director') ||
+      des.includes('magistrate') ||
+      des.includes('collector') ||
+      des.includes('chief') ||
+      des.includes('head') ||
+      des.includes('admin') ||
+      des.includes('mp')
+    );
+  },
+
+  /**
+   * Initializes real-time Firestore listener to keep Citizen and Government portals in sync.
+   */
+  initFirestoreListener(): void {
+    if (isFirestoreListenerActive) return;
+    isFirestoreListenerActive = true;
+
+    try {
+      const colRef = collection(db, 'requests');
+      onSnapshot(
+        colRef,
+        snapshot => {
+          if (!snapshot.empty) {
+            const firestoreList: CitizenRequest[] = [];
+            snapshot.forEach(docSnap => {
+              const data = docSnap.data() as CitizenRequest;
+              firestoreList.push(
+                normalizeRequest({
+                  ...data,
+                  id: docSnap.id || data.id,
+                })
+              );
+            });
+
+            // Sort by createdAt descending
+            firestoreList.sort(
+              (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+            );
+
+            inMemoryRequests = firestoreList;
+            saveRequestsToLocal(firestoreList);
+            notifyListeners();
+          } else {
+            // Seed Firestore with initial requests if empty
+            const localData = loadRequestsFromLocal();
+            localData.forEach(async req => {
+              try {
+                await setDoc(doc(db, 'requests', req.id), req, { merge: true });
+              } catch {
+                // Ignore seed error
+              }
+            });
+          }
+        },
+        error => {
+          console.warn('Firestore real-time listener error, falling back to local cache:', error);
+        }
+      );
+    } catch (err) {
+      console.warn('Could not attach Firestore onSnapshot listener:', err);
+    }
+  },
+
+  /**
+   * Asynchronously fetch all requests from Firestore
+   */
+  async fetchAllFromFirestore(): Promise<CitizenRequest[]> {
+    try {
+      const colRef = collection(db, 'requests');
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Firestore timeout')), 3000)
+      );
+      const snapshotPromise = getDocs(colRef);
+      const snapshot = (await Promise.race([snapshotPromise, timeoutPromise])) as any;
+
+      if (snapshot && !snapshot.empty) {
+        const firestoreList: CitizenRequest[] = [];
+        snapshot.forEach((docSnap: any) => {
+          const data = docSnap.data() as CitizenRequest;
+          firestoreList.push(
+            normalizeRequest({
+              ...data,
+              id: docSnap.id || data.id,
+            })
+          );
+        });
+
+        firestoreList.sort(
+          (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+        );
+
+        inMemoryRequests = firestoreList;
+        saveRequestsToLocal(firestoreList);
+        notifyListeners();
+        return firestoreList;
+      }
+    } catch (err) {
+      console.warn('Firestore fetch failed or timed out:', err);
+    }
+    return inMemoryRequests;
+  },
+
+  /**
+   * Subscribe to real-time request updates
+   */
+  subscribe(listener: RequestListener): () => void {
+    listeners.add(listener);
+    this.initFirestoreListener();
+    listener([...inMemoryRequests]);
+    return () => {
+      listeners.delete(listener);
+    };
+  },
+
   getAll(): CitizenRequest[] {
-    return loadRequests();
+    this.initFirestoreListener();
+    return [...inMemoryRequests];
   },
 
   getByUserId(userId: string): CitizenRequest[] {
-    return loadRequests().filter(r => r.userId === userId);
+    this.initFirestoreListener();
+    return inMemoryRequests.filter(r => r.userId === userId);
   },
 
   getById(id: string): CitizenRequest | undefined {
-    return loadRequests().find(r => r.id === id);
+    return inMemoryRequests.find(r => r.id === id);
   },
 
+  /**
+   * Get requests specifically assigned or targeted to a specific Government Officer
+   */
+  getByOfficer(officer?: User | null): CitizenRequest[] {
+    this.initFirestoreListener();
+    if (!officer) return inMemoryRequests;
+
+    const officerDept = officer.department?.toLowerCase();
+    const officerDistrict = officer.district?.toLowerCase();
+
+    return inMemoryRequests.filter(req => {
+      // 1. Explicitly assigned to this officer
+      if (req.assignedOfficerId === officer.id || req.assignedOfficerName === officer.name) {
+        return true;
+      }
+
+      // 2. Department match
+      const reqDept = (req.department || CATEGORY_DEPARTMENT_MAP[req.category] || '').toLowerCase();
+      const matchesDept = !officerDept || reqDept.includes(officerDept) || officerDept.includes(reqDept);
+
+      // 3. District / Region match
+      const reqLoc = (req.location + ' ' + (req.region || '')).toLowerCase();
+      const matchesRegion = !officerDistrict || officerDistrict === 'all districts' || reqLoc.includes(officerDistrict);
+
+      return matchesDept && matchesRegion;
+    });
+  },
+
+  /**
+   * Get requests for a whole department (used by Department Requests page)
+   */
+  getByDepartment(department?: string, district?: string): CitizenRequest[] {
+    this.initFirestoreListener();
+    const deptNorm = department?.toLowerCase();
+    const distNorm = district?.toLowerCase();
+
+    return inMemoryRequests.filter(req => {
+      const reqDept = (req.department || CATEGORY_DEPARTMENT_MAP[req.category] || '').toLowerCase();
+      const matchesDept = !deptNorm || deptNorm === 'all' || reqDept.includes(deptNorm) || deptNorm.includes(reqDept);
+
+      const reqLoc = (req.location + ' ' + (req.region || '')).toLowerCase();
+      const matchesRegion = !distNorm || distNorm === 'all' || distNorm === 'all districts' || reqLoc.includes(distNorm);
+
+      return matchesDept && matchesRegion;
+    });
+  },
+
+  /**
+   * Automatic routing: Citizen Request -> Category -> Department -> Region -> Officer
+   */
   create(
     userId: string,
     category: Category,
@@ -53,12 +274,16 @@ export const requestService = {
     priority?: PriorityLevel,
     coordinates?: { lat: number; lng: number }
   ): CitizenRequest {
-    const requests = loadRequests();
+    const autoDept = CATEGORY_DEPARTMENT_MAP[category] || 'Public Works Department (PWD)';
+    const autoRegion = location.split(',')[0].trim() || 'Kalahandi';
+
     const newRequest: CitizenRequest = {
       id: `REQ-2026-${Math.floor(1000 + Math.random() * 9000)}`,
       userId,
       userName: 'Priya Sharma',
       category,
+      department: autoDept,
+      region: autoRegion,
       description,
       location,
       coordinates,
@@ -73,40 +298,155 @@ export const requestService = {
       isVoice,
       voiceTranscription,
     };
-    requests.unshift(newRequest);
-    saveRequests(requests);
+
+    inMemoryRequests.unshift(newRequest);
+    saveRequestsToLocal(inMemoryRequests);
+    notifyListeners();
+
+    // Persist to Firestore
+    try {
+      const firestorePromise = setDoc(doc(db, 'requests', newRequest.id), newRequest, { merge: true });
+      const timeoutPromise = new Promise(r => setTimeout(r, 2000));
+      Promise.race([firestorePromise, timeoutPromise]).catch(err => {
+        console.warn('Firestore write warning on create:', err);
+      });
+    } catch (e) {
+      console.warn('Error queuing Firestore request creation:', e);
+    }
+
     return newRequest;
   },
 
-  updateStatus(id: string, newStatus: RequestStatus, officialResponse?: OfficialResponse): CitizenRequest | null {
-    const requests = loadRequests();
-    const idx = requests.findIndex(r => r.id === id);
+  /**
+   * Assign request to an officer: Transition to 'assigned' status
+   */
+  assignOfficer(
+    requestId: string,
+    officerId: string,
+    officerName: string,
+    officerDesignation: string
+  ): CitizenRequest | null {
+    const idx = inMemoryRequests.findIndex(r => r.id === requestId);
     if (idx === -1) return null;
 
-    requests[idx] = {
-      ...requests[idx],
-      status: newStatus,
+    const updatedRequest: CitizenRequest = {
+      ...inMemoryRequests[idx],
+      assignedOfficerId: officerId,
+      assignedOfficerName: officerName,
+      assignedOfficerDesignation: officerDesignation,
+      status: inMemoryRequests[idx].status === 'pending' || inMemoryRequests[idx].status === 'new' ? 'assigned' : inMemoryRequests[idx].status,
       updatedAt: new Date().toISOString(),
-      officialResponse: officialResponse || requests[idx].officialResponse,
     };
 
-    saveRequests(requests);
-    return requests[idx];
+    inMemoryRequests[idx] = updatedRequest;
+    saveRequestsToLocal(inMemoryRequests);
+    notifyListeners();
+
+    try {
+      setDoc(doc(db, 'requests', requestId), {
+        assignedOfficerId: officerId,
+        assignedOfficerName: officerName,
+        assignedOfficerDesignation: officerDesignation,
+        status: updatedRequest.status,
+        updatedAt: updatedRequest.updatedAt,
+      }, { merge: true }).catch(err => console.warn('Assign error:', err));
+    } catch (e) {
+      console.warn('Assign officer error:', e);
+    }
+
+    return updatedRequest;
+  },
+
+  /**
+   * Status Transition Workflow: New -> Assigned -> In Progress -> Resolved
+   */
+  updateStatus(id: string, newStatus: RequestStatus, officialResponse?: OfficialResponse): CitizenRequest | null {
+    const idx = inMemoryRequests.findIndex(r => r.id === id);
+    if (idx === -1) return null;
+
+    const updatedRequest: CitizenRequest = {
+      ...inMemoryRequests[idx],
+      status: newStatus,
+      updatedAt: new Date().toISOString(),
+      officialResponse: officialResponse || inMemoryRequests[idx].officialResponse,
+    };
+
+    inMemoryRequests[idx] = updatedRequest;
+    saveRequestsToLocal(inMemoryRequests);
+    notifyListeners();
+
+    // Sync update to Firestore
+    try {
+      const updateData: Partial<CitizenRequest> = {
+        status: newStatus,
+        updatedAt: updatedRequest.updatedAt,
+      };
+      if (officialResponse) {
+        updateData.officialResponse = officialResponse;
+      }
+      setDoc(doc(db, 'requests', id), updateData, { merge: true }).catch(err => {
+        console.warn('Firestore status update warning:', err);
+      });
+    } catch (e) {
+      console.warn('Error queuing Firestore status update:', e);
+    }
+
+    return updatedRequest;
   },
 
   getStats(userId?: string) {
-    const all = userId ? loadRequests().filter(r => r.userId === userId) : loadRequests();
+    const all = userId ? inMemoryRequests.filter(r => r.userId === userId) : inMemoryRequests;
     return {
       total: all.length,
-      pending: all.filter(r => r.status === 'pending').length,
+      pending: all.filter(r => r.status === 'pending' || r.status === 'new').length,
+      assigned: all.filter(r => r.status === 'assigned').length,
       underReview: all.filter(r => r.status === 'under_review').length,
       inProgress: all.filter(r => r.status === 'in_progress').length,
       resolved: all.filter(r => r.status === 'resolved').length,
       rejected: all.filter(r => r.status === 'rejected').length,
+      highPriority: all.filter(r => r.priority === 'high' || r.aiAnalysis?.severity === 'critical' || r.aiAnalysis?.severity === 'high').length,
     };
   },
 
   reset(): void {
-    saveRequests([...MOCK_REQUESTS]);
+    inMemoryRequests = [...MOCK_REQUESTS].map(normalizeRequest);
+    saveRequestsToLocal(inMemoryRequests);
+    notifyListeners();
   },
 };
+
+/**
+ * Custom React Hook for live synchronized citizen requests
+ */
+export function useCitizenRequests() {
+  const [requests, setRequests] = useState<CitizenRequest[]>(() => requestService.getAll());
+  const [loading, setLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+
+    const unsubscribe = requestService.subscribe((updated: CitizenRequest[]) => {
+      if (mounted) {
+        setRequests(updated);
+        setLoading(false);
+      }
+    });
+
+    requestService.fetchAllFromFirestore().then(fetched => {
+      if (mounted) {
+        setRequests(fetched);
+        setLoading(false);
+      }
+    }).catch(() => {
+      if (mounted) setLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, []);
+
+  return { requests, loading };
+}
