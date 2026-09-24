@@ -122,12 +122,20 @@ export default function CitizenLayout() {
                 to="/citizen/profile"
                 className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 bg-white border-2 border-black rounded-xl shadow-brutal-sm hover:bg-brand-yellow/30 transition-colors"
               >
-                <div className="w-7 h-7 bg-black text-brand-yellow rounded-lg flex items-center justify-center font-heading font-extrabold text-xs">
-                  {user.name.charAt(0)}
-                </div>
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="w-7 h-7 rounded-lg border border-black object-cover"
+                  />
+                ) : (
+                  <div className="w-7 h-7 bg-black text-brand-yellow rounded-lg flex items-center justify-center font-heading font-extrabold text-xs">
+                    {user.name.charAt(0)}
+                  </div>
+                )}
                 <div className="text-left leading-none">
-                  <p className="font-extrabold text-xs">{user.name.split(' ')[0]}</p>
-                  <p className="text-[10px] font-bold text-black/60">{user.location.split(',')[0]}</p>
+                  <p className="font-extrabold text-xs">{user.name}</p>
+                  <p className="text-[10px] font-bold text-black/60">{user.location}</p>
                 </div>
               </Link>
             )}
@@ -158,9 +166,17 @@ export default function CitizenLayout() {
           <div className="p-4 space-y-2">
             {user && (
               <div className="flex items-center gap-3 p-3 bg-white border-2 border-black rounded-xl mb-3">
-                <div className="w-10 h-10 bg-black text-brand-yellow rounded-xl flex items-center justify-center font-heading font-extrabold text-lg">
-                  {user.name.charAt(0)}
-                </div>
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="w-10 h-10 rounded-xl border border-black object-cover"
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-black text-brand-yellow rounded-xl flex items-center justify-center font-heading font-extrabold text-lg">
+                    {user.name.charAt(0)}
+                  </div>
+                )}
                 <div>
                   <p className="font-heading font-extrabold text-sm">{user.name}</p>
                   <p className="text-xs font-bold text-black/60">{user.location}</p>

@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import { authService } from '../services/authService';
 import type { Role } from '../types';
 
@@ -22,22 +25,106 @@ export default function LoginPage() {
   const [role, setRole] = useState<Role>('citizen');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleResetPassword = async () => {
+    if (!email.trim()) {
+      setError('Please enter your email address to receive the password reset link.');
+      return;
+    }
+    setError('');
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setSuccessMsg('Password reset link sent to your email. Please check your inbox/spam folder.');
+    } catch (err: any) {
+      console.error(err);
+      setError('Failed to send password reset email. Check if the email address is correct.');
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!email.trim()) { setError('Email is required.'); return; }
-    if (!password.trim()) { setError('Password is required.'); return; }
+    setSuccessMsg('');
+
+    if (!email.trim()) {
+      setError('Email is required.');
+      return;
+    }
+
+    if (!password.trim()) {
+      setError('Password is required.');
+      return;
+    }
+
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    const user = authService.login(email, password, role);
-    setLoading(false);
-    if (user) {
-      if (role === 'citizen') navigate('/citizen/dashboard');
-      else navigate('/government/overview');
-    } else {
-      setError('Invalid credentials. Use the demo accounts below.');
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password
+      );
+
+      const uid = userCredential.user.uid;
+      let profileData: any = null;
+      try {
+        const docRef = doc(db, 'users', uid);
+        const docSnapPromise = getDoc(docRef);
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject('timeout'), 2000));
+        const docSnap = await Promise.race([docSnapPromise, timeoutPromise]) as any;
+        if (docSnap && typeof docSnap.exists === 'function' && docSnap.exists()) {
+          profileData = docSnap.data();
+        }
+      } catch (err) {
+        console.warn('Could not fetch remote profile:', err);
+      }
+
+      const cached = authService.getCurrentUser();
+      const name = profileData?.name || (cached?.email === email.trim() ? cached.name : null) || userCredential.user.displayName || email.trim().split('@')[0];
+      const location = profileData?.location || (cached?.email === email.trim() ? cached.location : null) || 'Odisha, India';
+      const language = profileData?.language || (cached?.email === email.trim() ? cached.language : null) || 'English';
+      const avatar = profileData?.avatar || (cached?.email === email.trim() ? cached.avatar : null) || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+      const phone = profileData?.phone || (cached?.email === email.trim() ? cached.phone : undefined);
+      const bio = profileData?.bio || (cached?.email === email.trim() ? cached.bio : undefined);
+      const organization = profileData?.organization || (cached?.email === email.trim() ? cached.organization : undefined);
+
+      // Save user session
+      authService.saveUser({
+        id: uid,
+        name,
+        email: userCredential.user.email || email.trim(),
+        role: (profileData?.role as Role) || role,
+        location,
+        language,
+        avatar,
+        phone,
+        bio,
+        organization,
+      });
+
+      // Login successful
+      if (role === 'citizen') {
+        navigate('/citizen/dashboard');
+      } else {
+        navigate('/government/overview');
+      }
+
+    } catch (error: any) {
+      console.error(error);
+
+      if (error.code === 'auth/invalid-credential') {
+        setError('Invalid email or password.');
+      } else if (error.code === 'auth/user-not-found') {
+        setError('No account found with this email.');
+      } else if (error.code === 'auth/wrong-password') {
+        setError('Incorrect password.');
+      } else {
+        setError('Login failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -144,7 +231,23 @@ export default function LoginPage() {
                     {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                   </button>
                 </div>
+                <div className="flex justify-end mt-1">
+                  <button
+                    type="button"
+                    onClick={handleResetPassword}
+                    className="text-xs font-bold text-black/70 hover:text-black underline"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
               </div>
+
+              {/* Success Message */}
+              {successMsg && (
+                <div className="bg-green-100 border-2 border-green-600 rounded-xl px-4 py-3 text-green-800 text-sm font-bold">
+                  ✓ {successMsg}
+                </div>
+              )}
 
               {/* Error */}
               {error && (

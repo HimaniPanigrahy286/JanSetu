@@ -28,41 +28,79 @@ export default function CitizenDashboard() {
     <div className="space-y-6">
       {/* Welcome Banner */}
       <div className="bg-brand-yellow card-brutal-lg rounded-3xl p-6 md:p-8 relative overflow-hidden">
-        {/* Background Graphic Accent */}
-        <div className="absolute right-4 -bottom-6 opacity-10 pointer-events-none hidden md:block">
-          <span className="font-heading font-extrabold text-9xl">JANSETU</span>
-        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+          <div className="lg:col-span-2 space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border-2 border-black rounded-full shadow-brutal-sm text-xs font-extrabold uppercase tracking-wider">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              Citizen Infrastructure Dashboard
+            </div>
 
-        <div className="relative z-10 space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border-2 border-black rounded-full shadow-brutal-sm text-xs font-extrabold uppercase tracking-wider">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-            Citizen Infrastructure Dashboard
+            <div>
+              <p className="font-bold text-xs uppercase tracking-widest text-black/70">{greeting},</p>
+              <h1 className="font-heading font-extrabold text-3xl md:text-5xl tracking-tight text-black mt-0.5">
+                {user.name} 👋
+              </h1>
+            </div>
+
+            <p className="text-sm md:text-base font-medium text-black/80 max-w-2xl leading-relaxed">
+              Report infrastructure problems, track public works in your ward, and voice local development priorities directly to government authorities.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-2.5 pt-2">
+              <span className="px-3 py-1.5 bg-white border-2 border-black rounded-xl text-xs font-extrabold shadow-brutal-sm flex items-center gap-1.5">
+                <MapPin size={13} className="text-red-500" />
+                {user.location}
+              </span>
+              <span className="px-3 py-1.5 bg-white border-2 border-black rounded-xl text-xs font-extrabold shadow-brutal-sm">
+                🌐 Dialect: {user.language}
+              </span>
+              <span className="px-3 py-1.5 bg-black text-brand-yellow border-2 border-black rounded-xl text-xs font-extrabold flex items-center gap-1.5">
+                <Sparkles size={13} />
+                All Prioritization Active
+              </span>
+            </div>
           </div>
 
-          <div>
-            <p className="font-bold text-xs uppercase tracking-widest text-black/70">{greeting},</p>
-            <h1 className="font-heading font-extrabold text-3xl md:text-5xl tracking-tight text-black mt-0.5">
-              {user.name} 👋
-            </h1>
-          </div>
+          {/* User Profile Card */}
+          <Link
+            to="/citizen/profile"
+            className="bg-white/80 backdrop-blur-sm border-2 border-black rounded-2xl p-5 card-brutal hover:bg-white transition-all space-y-4 cursor-pointer"
+          >
+            <div className="flex items-center gap-3.5">
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-14 h-14 rounded-full border-2 border-black object-cover shadow-brutal-sm"
+                />
+              ) : (
+                <div className="w-14 h-14 bg-black text-brand-yellow rounded-full border-2 border-black flex items-center justify-center font-heading font-extrabold text-2xl shadow-brutal-sm">
+                  {user.name.charAt(0)}
+                </div>
+              )}
+              <div className="min-w-0">
+                <h3 className="font-heading font-extrabold text-base text-black truncate">{user.name}</h3>
+                <p className="text-xs font-bold text-black/70 truncate">{user.organization || user.bio || "CSIT'29 • ITER (SOA)"}</p>
+                <p className="text-[11px] font-semibold text-black/60 flex items-center gap-1 mt-0.5">
+                  <MapPin size={11} className="text-red-500 shrink-0" />
+                  <span className="truncate">{user.location}</span>
+                </p>
+              </div>
+            </div>
 
-          <p className="text-sm md:text-base font-medium text-black/80 max-w-2xl leading-relaxed">
-            Report infrastructure defects, track public works in your ward, and voice local development priorities directly to government authorities.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-2.5 pt-2">
-            <span className="px-3 py-1.5 bg-white border-2 border-black rounded-xl text-xs font-extrabold shadow-brutal-sm flex items-center gap-1.5">
-              <MapPin size={13} className="text-red-500" />
-              {user.location}
-            </span>
-            <span className="px-3 py-1.5 bg-white border-2 border-black rounded-xl text-xs font-extrabold shadow-brutal-sm">
-              🌐 Dialect: {user.language}
-            </span>
-            <span className="px-3 py-1.5 bg-black text-brand-yellow border-2 border-black rounded-xl text-xs font-extrabold flex items-center gap-1.5">
-              <Sparkles size={13} />
-              AI Prioritization Active
-            </span>
-          </div>
+            <div className="pt-2 border-t-2 border-black/10 space-y-2 text-xs">
+              <div className="flex items-center justify-between font-bold">
+                <span className="text-black/70">Total Requests</span>
+                <span className="font-heading font-extrabold text-sm flex items-center gap-1">
+                  {stats.total} <ArrowRight size={12} />
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-black/70">
+                <span>⭐</span>
+                <span>Community Impact: <span className="font-bold text-black">Together for a better tomorrow</span></span>
+              </div>
+            </div>
+          </Link>
         </div>
       </div>
 

@@ -25,6 +25,8 @@ export interface User {
   language: string;
   avatar?: string;
   phone?: string;
+  bio?: string;
+  organization?: string;
 }
 
 export interface AIAnalysis {

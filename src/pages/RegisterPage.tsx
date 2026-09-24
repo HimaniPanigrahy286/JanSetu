@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
+import { authService } from '../services/authService';
 import type { Role } from '../types';
 
 const EyeIcon = () => (
@@ -39,6 +43,9 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState<Partial<FormState>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [existingAccountWarning, setExistingAccountWarning] = useState(false);
 
   const validate = (): boolean => {
     const newErrors: Partial<FormState> = {};
@@ -61,13 +68,105 @@ export default function RegisterPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSendReset = async () => {
+    if (!form.email.trim()) return;
+    try {
+      await sendPasswordResetEmail(auth, form.email.trim());
+      setResetSent(true);
+    } catch (err: any) {
+      console.error(err);
+      setErrors(prev => ({ ...prev, email: 'Could not send reset email. Please try again.' }));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setExistingAccountWarning(false);
+    setResetSent(false);
+
     if (!validate()) return;
-    // Note: Registration is frontend-only demo. 
-    // In production this would call authService.register().
-    // Direct user to login with note.
-    setSubmitted(true);
+
+    setLoading(true);
+    try {
+      let user;
+      try {
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          form.email.trim(),
+          form.password
+        );
+        user = userCredential.user;
+      } catch (authError: any) {
+        if (authError.code === 'auth/email-already-in-use') {
+          // Attempt to sign in if the account already exists in Firebase Auth
+          try {
+            const signInCredential = await signInWithEmailAndPassword(
+              auth,
+              form.email.trim(),
+              form.password
+            );
+            user = signInCredential.user;
+          } catch {
+            // Password didn't match existing account
+            setExistingAccountWarning(true);
+            setErrors({
+              email: 'An account already exists with this email.',
+            });
+            return;
+          }
+        } else {
+          throw authError;
+        }
+      }
+
+      // Save local session
+      authService.saveUser({
+        id: user.uid,
+        name: form.name.trim(),
+        email: form.email.trim(),
+        role: form.role,
+        location: form.location.trim(),
+        language: form.language,
+        avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`,
+      });
+
+      // Try storing user in Firestore with a timeout so it never hangs
+      try {
+        const firestorePromise = setDoc(doc(db, 'users', user.uid), {
+          name: form.name.trim(),
+          email: form.email.trim(),
+          location: form.location.trim(),
+          language: form.language,
+          role: form.role,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+
+        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 2000));
+        await Promise.race([firestorePromise, timeoutPromise]);
+      } catch (dbErr) {
+        console.warn('Firestore write warning:', dbErr);
+      }
+
+      setSubmitted(true);
+    } catch (error: any) {
+      console.error(error);
+
+      if (error.code === 'auth/invalid-email') {
+        setErrors({
+          email: 'Please enter a valid email address.',
+        });
+      } else if (error.code === 'auth/weak-password') {
+        setErrors({
+          password: 'Password is too weak. Please use a stronger password.',
+        });
+      } else {
+        setErrors({
+          email: error.message || 'Registration failed. Please try again.',
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const set = (k: keyof FormState, v: string) => {
@@ -184,6 +283,36 @@ export default function RegisterPage() {
                   className={`w-full border-2 rounded-xl px-4 py-3 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-black ${errors.email ? 'border-red-600 bg-red-50' : 'border-black'}`}
                 />
                 {errors.email && <p className="text-red-600 text-xs font-bold mt-1">⚠ {errors.email}</p>}
+
+                {existingAccountWarning && (
+                  <div className="mt-2 p-3 bg-amber-50 border-2 border-amber-400 rounded-xl text-xs space-y-2">
+                    <p className="text-amber-900 font-semibold">
+                      This email is already registered in Firebase. If this is your account, you can sign in directly or reset your password:
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => navigate('/login')}
+                        className="bg-black text-white px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-black/80 transition-colors"
+                      >
+                        Go to Sign In &rarr;
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSendReset}
+                        className="bg-amber-200 text-amber-900 border border-amber-400 px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-amber-300 transition-colors"
+                      >
+                        Send Password Reset Link
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {resetSent && (
+                  <div className="mt-2 p-3 bg-green-50 border-2 border-green-500 rounded-xl text-xs text-green-800 font-bold">
+                    ✓ Password reset email sent! Check your inbox to set a new password, then sign in.
+                  </div>
+                )}
               </div>
 
               {/* Location & Language (grid) */}
@@ -259,9 +388,20 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 id="reg-submit"
-                className="btn-brutal-primary w-full py-4 rounded-xl text-base font-extrabold"
+                disabled={loading}
+                className="btn-brutal-primary w-full py-4 rounded-xl text-base font-extrabold disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Create Account →
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Creating Account...
+                  </span>
+                ) : (
+                  'Create Account →'
+                )}
               </button>
             </form>
 

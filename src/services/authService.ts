@@ -13,6 +13,10 @@ export const authService = {
     return null;
   },
 
+  saveUser(user: User): void {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+  },
+
   logout(): void {
     localStorage.removeItem(SESSION_KEY);
   },
