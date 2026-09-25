@@ -1,193 +1,336 @@
-import React, { useState } from 'react';
-import { FolderKanban, Filter, Search, Calendar, DollarSign, MapPin, ChevronDown, CheckCircle, Clock, TrendingUp, PauseCircle } from 'lucide-react';
+import { useState } from 'react';
+import {
+  FolderKanban,
+  Search,
+  MapPin,
+  Eye,
+  X,
+} from 'lucide-react';
 import { projectService } from '../../services/projectService';
+import CategoryBadge from '../../components/common/CategoryBadge';
 import type { Project } from '../../types';
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  planning: { label: 'Planning', color: 'bg-blue-100 text-blue-700 border-blue-200', icon: <Clock size={13} /> },
-  in_progress: { label: 'In Progress', color: 'bg-orange-100 text-orange-700 border-orange-200', icon: <TrendingUp size={13} /> },
-  completed: { label: 'Completed', color: 'bg-green-100 text-green-700 border-green-200', icon: <CheckCircle size={13} /> },
-  on_hold: { label: 'On Hold', color: 'bg-slate-100 text-slate-700 border-slate-200', icon: <PauseCircle size={13} /> },
-};
-
-const CAT_COLORS: Record<string, string> = {
-  Roads: 'bg-blue-100 text-blue-700',
-  Water: 'bg-cyan-100 text-cyan-700',
-  Electricity: 'bg-yellow-100 text-yellow-700',
-  Healthcare: 'bg-red-100 text-red-700',
-  Education: 'bg-purple-100 text-purple-700',
-  'Digital Infrastructure': 'bg-indigo-100 text-indigo-700',
-};
-
 export default function Projects() {
-  const projects = projectService.getAll();
-  const stats = projectService.getStats();
-  const [filter, setFilter] = useState('all');
+  const [projects, setProjects] = useState<Project[]>(projectService.getAll());
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<Project | null>(null);
 
-  let filtered = projects;
-  if (filter !== 'all') filtered = filtered.filter(p => p.status === filter);
-  if (search) filtered = filtered.filter(p =>
-    p.title.toLowerCase().includes(search.toLowerCase()) ||
-    p.region.toLowerCase().includes(search.toLowerCase())
-  );
+  // Selected project for view/update modal
+  const [selectedProj, setSelectedProj] = useState<Project | null>(null);
+  const [newStatus, setNewStatus] = useState<Project['status']>('in_progress');
+  const [newProgress, setNewProgress] = useState<number>(50);
+
+  const stats = projectService.getStats();
+
+  const handleUpdateStatus = () => {
+    if (!selectedProj) return;
+    const updated = projectService.updateProjectStatus(selectedProj.id, newStatus, newProgress);
+    if (updated) {
+      setSelectedProj(updated);
+      setProjects(projectService.getAll());
+    }
+  };
+
+  const filtered = projects.filter(p => {
+    if (statusFilter !== 'all' && p.status !== statusFilter) return false;
+    if (categoryFilter !== 'All' && p.category !== categoryFilter) return false;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      const match =
+        p.title.toLowerCase().includes(q) ||
+        p.region.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    return true;
+  });
 
   const formatBudget = (b: number) => {
     if (b >= 10000000) return `₹${(b / 10000000).toFixed(1)} Cr`;
-    if (b >= 100000) return `₹${(b / 100000).toFixed(1)} L`;
+    if (b >= 100000) return `₹${(b / 100000).toFixed(1)} Lakh`;
     return `₹${b.toLocaleString()}`;
   };
 
-  const getProgress = (p: Project) => {
-    if (p.status === 'completed') return 100;
-    if (p.status === 'on_hold') return 30;
-    if (p.status === 'in_progress') return 60;
-    return 10;
-  };
-
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Projects</h1>
-        <p className="text-slate-500 text-sm">Track infrastructure projects funded by government investment</p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-3">
-        {[
-          { label: 'Total Projects', value: stats.total, color: 'text-slate-800' },
-          { label: 'Planning', value: stats.planning, color: 'text-blue-600' },
-          { label: 'In Progress', value: stats.inProgress, color: 'text-orange-600' },
-          { label: 'Completed', value: stats.completed, color: 'text-green-600' },
-        ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm text-center">
-            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-brand-yellow card-brutal rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border-2 border-black rounded-full shadow-brutal-sm text-xs font-extrabold uppercase tracking-wider mb-2">
+            <FolderKanban size={13} />
+            Public Works Project Pipeline
           </div>
-        ))}
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex gap-3 items-center">
-        <div className="relative flex-1 max-w-sm">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search projects..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:bg-white transition-all"
-          />
+          <h1 className="font-heading font-extrabold text-3xl md:text-4xl text-black">
+            INFRASTRUCTURE PROJECTS PIPELINE
+          </h1>
+          <p className="font-medium text-sm text-black/75 mt-1">
+            Capital projects directly derived from citizen demand clusters and explainable AI prioritization.
+          </p>
         </div>
-        <div className="flex gap-2">
-          {['all', 'planning', 'in_progress', 'completed', 'on_hold'].map(s => (
-            <button
-              key={s}
-              onClick={() => setFilter(s)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                filter === s ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {s === 'all' ? 'All' : STATUS_CONFIG[s]?.label || s}
-            </button>
-          ))}
+
+        <div className="p-3 bg-white border-2 border-black rounded-xl shadow-brutal-sm text-xs font-bold text-black/80">
+          Total Sanctioned Budget: <span className="font-extrabold text-black font-mono">{formatBudget(stats.totalBudget)}</span>
         </div>
       </div>
 
-      {/* Project Cards */}
-      <div className="grid grid-cols-3 gap-4">
-        {filtered.map(project => {
-          const status = STATUS_CONFIG[project.status];
-          const progress = getProgress(project);
-          return (
-            <div
-              key={project.id}
-              onClick={() => setSelected(project)}
-              className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
-            >
-              <div className="flex items-start justify-between gap-2 mb-3">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${CAT_COLORS[project.category] || 'bg-slate-100 text-slate-600'}`}>
-                  {project.category}
-                </span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium border flex items-center gap-1 ${status.color}`}>
-                  {status.icon}
-                  {status.label}
+      {/* KPI Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white card-brutal rounded-2xl p-4 text-center">
+          <p className="font-heading font-extrabold text-3xl text-black">{stats.total}</p>
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-black/60 mt-1">Total Projects</p>
+        </div>
+        <div className="bg-brand-yellow card-brutal rounded-2xl p-4 text-center">
+          <p className="font-heading font-extrabold text-3xl text-black">{stats.proposed + stats.planning}</p>
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-black/70 mt-1">Proposed / Planning</p>
+        </div>
+        <div className="bg-brand-charcoal text-white card-brutal rounded-2xl p-4 text-center">
+          <p className="font-heading font-extrabold text-3xl text-brand-yellow">{stats.inProgress}</p>
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-sage mt-1">In Execution</p>
+        </div>
+        <div className="bg-white card-brutal rounded-2xl p-4 text-center">
+          <p className="font-heading font-extrabold text-3xl text-emerald-700">{stats.completed}</p>
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-black/60 mt-1">Completed</p>
+        </div>
+      </div>
+
+      {/* Filter & Search Toolbar */}
+      <div className="bg-white card-brutal rounded-2xl p-4 space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[240px]">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/40" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search projects by name, district, category..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border-2 border-black rounded-xl text-xs font-bold focus:outline-none"
+            />
+          </div>
+
+          {/* Category Dropdown */}
+          <select
+            value={categoryFilter}
+            onChange={e => setCategoryFilter(e.target.value)}
+            className="bg-white border-2 border-black rounded-xl px-3 py-2 text-xs font-bold focus:outline-none"
+          >
+            <option value="All">All Categories</option>
+            <option value="Roads">Roads & Transport</option>
+            <option value="Water">Water Supply</option>
+            <option value="Electricity">Electricity & Energy</option>
+            <option value="Healthcare">Healthcare</option>
+            <option value="Education">Education</option>
+            <option value="Sanitation">Sanitation</option>
+          </select>
+
+          {/* Status Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            {['all', 'proposed', 'planning', 'in_progress', 'completed'].map(st => (
+              <button
+                key={st}
+                onClick={() => setStatusFilter(st)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold border-2 transition-all capitalize ${
+                  statusFilter === st
+                    ? 'bg-black text-white border-black shadow-brutal-sm'
+                    : 'bg-white text-black border-black/20 hover:border-black'
+                }`}
+              >
+                {st.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Projects Grid Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {filtered.map(proj => (
+          <div
+            key={proj.id}
+            onClick={() => {
+              setSelectedProj(proj);
+              setNewStatus(proj.status);
+              setNewProgress(proj.progress || 50);
+            }}
+            className="bg-white card-brutal-lg rounded-3xl p-6 flex flex-col justify-between transition-all hover:border-black cursor-pointer space-y-4"
+          >
+            <div className="space-y-3">
+              {/* Header Badges */}
+              <div className="flex items-start justify-between gap-2">
+                <CategoryBadge category={proj.category} size="sm" />
+                <span
+                  className={`px-2.5 py-0.5 rounded-lg border-2 text-[10px] font-extrabold uppercase shadow-brutal-sm ${
+                    proj.status === 'completed'
+                      ? 'bg-emerald-100 border-emerald-600 text-emerald-800'
+                      : proj.status === 'in_progress'
+                        ? 'bg-brand-yellow border-black text-black'
+                        : proj.status === 'planning'
+                          ? 'bg-brand-sage border-black text-black'
+                          : 'bg-white border-black text-black'
+                  }`}
+                >
+                  {proj.status.replace('_', ' ')}
                 </span>
               </div>
 
-              <h3 className="font-bold text-slate-800 text-sm leading-tight mb-1">{project.title}</h3>
-              <p className="text-xs text-slate-500 line-clamp-2 mb-3">{project.description}</p>
+              {/* Title & Region */}
+              <div>
+                <h3 className="font-heading font-extrabold text-lg text-black leading-tight">{proj.title}</h3>
+                <p className="text-xs font-bold text-black/60 mt-1 flex items-center gap-1">
+                  <MapPin size={12} className="text-red-500" />
+                  {proj.region} Region
+                </p>
+              </div>
 
-              {/* Progress */}
-              <div className="mb-3">
-                <div className="flex justify-between text-xs text-slate-500 mb-1">
-                  <span>Progress</span>
-                  <span>{progress}%</span>
+              <p className="text-xs font-medium text-black/75 line-clamp-2 leading-relaxed">{proj.description}</p>
+
+              {/* Progress Bar */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[11px] font-extrabold">
+                  <span className="text-black/60">Execution Progress</span>
+                  <span className="font-mono text-black">{proj.progress || (proj.status === 'completed' ? 100 : 45)}%</span>
                 </div>
-                <div className="h-2 bg-slate-100 rounded-full">
+                <div className="w-full bg-black/10 h-2.5 rounded-full border border-black/20 overflow-hidden">
                   <div
-                    className="h-2 rounded-full transition-all"
+                    className="h-full bg-black rounded-full"
                     style={{
-                      width: `${progress}%`,
-                      background: project.status === 'completed' ? '#22c55e' : project.status === 'in_progress' ? '#f97316' : project.status === 'on_hold' ? '#94a3b8' : '#3b82f6'
+                      width: `${proj.progress || (proj.status === 'completed' ? 100 : 45)}%`,
+                      backgroundColor: proj.status === 'completed' ? '#10b981' : '#000000',
                     }}
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="flex items-center gap-1.5 text-slate-600">
-                  <DollarSign size={12} className="text-green-500" />
-                  {formatBudget(project.budget)}
+              {/* Key Project Numbers */}
+              <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
+                <div className="p-2.5 bg-gray-50 border border-black/20 rounded-xl">
+                  <span className="text-[10px] font-extrabold uppercase text-black/50 block">Sanctioned Budget</span>
+                  <span className="font-heading font-extrabold text-sm text-black font-mono">
+                    {formatBudget(proj.budget)}
+                  </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-slate-600">
-                  <MapPin size={12} className="text-blue-500" />
-                  <span className="truncate">{project.region}</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-600">
-                  <Calendar size={12} className="text-purple-500" />
-                  {new Date(project.startDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-600">
-                  <CheckCircle size={12} className="text-orange-500" />
-                  {project.requestsAddressed.toLocaleString()} requests
+                <div className="p-2.5 bg-gray-50 border border-black/20 rounded-xl">
+                  <span className="text-[10px] font-extrabold uppercase text-black/50 block">Complaints Solved</span>
+                  <span className="font-heading font-extrabold text-sm text-emerald-700 font-mono">
+                    {proj.requestsAddressed} Grievances
+                  </span>
                 </div>
               </div>
             </div>
-          );
-        })}
+
+            {/* Actions */}
+            <div className="pt-3 border-t-2 border-black/10 flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold text-black/50">ID: {proj.id}</span>
+              <button
+                type="button"
+                className="btn-brutal-secondary px-3 py-1.5 rounded-lg text-xs font-extrabold inline-flex items-center gap-1"
+              >
+                <Eye size={12} />
+                <span>View Details</span>
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Modal */}
-      {selected && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
-          <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="font-bold text-slate-800 text-lg leading-tight max-w-xs">{selected.title}</h3>
-              <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-slate-600 text-2xl font-light shrink-0">×</button>
+      {/* Project Details & Status Modifier Modal */}
+      {selectedProj && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setSelectedProj(null)}
+        >
+          <div
+            className="bg-white card-brutal-xl rounded-3xl max-w-xl w-full p-6 md:p-8 space-y-5 animate-in zoom-in-95 duration-150"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-2 pb-3 border-b-2 border-black">
+              <div>
+                <span className="font-mono text-xs font-extrabold bg-brand-yellow px-2 py-0.5 border border-black rounded">
+                  {selectedProj.id}
+                </span>
+                <h3 className="font-heading font-extrabold text-xl text-black mt-1">{selectedProj.title}</h3>
+              </div>
+              <button
+                onClick={() => setSelectedProj(null)}
+                className="w-8 h-8 bg-white border-2 border-black rounded-lg flex items-center justify-center font-extrabold hover:bg-black hover:text-white transition-colors"
+              >
+                <X size={16} />
+              </button>
             </div>
-            <div className="flex gap-2 mb-4 flex-wrap">
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${CAT_COLORS[selected.category]}`}>{selected.category}</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium border flex items-center gap-1 ${STATUS_CONFIG[selected.status].color}`}>
-                {STATUS_CONFIG[selected.status].icon}
-                {STATUS_CONFIG[selected.status].label}
-              </span>
-            </div>
-            <p className="text-sm text-slate-600 mb-4">{selected.description}</p>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: 'Budget', value: formatBudget(selected.budget) },
-                { label: 'Region', value: selected.region },
-                { label: 'Start Date', value: new Date(selected.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) },
-                { label: 'Completion', value: new Date(selected.completionDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) },
-                { label: 'Requests Addressed', value: selected.requestsAddressed.toLocaleString() },
-                { label: 'Progress', value: `${getProgress(selected)}%` },
-              ].map(item => (
-                <div key={item.label} className="bg-slate-50 rounded-lg p-3">
-                  <p className="text-xs text-slate-500 mb-0.5">{item.label}</p>
-                  <p className="font-semibold text-sm text-slate-800">{item.value}</p>
+
+            <div className="space-y-4 text-xs">
+              <p className="font-medium text-sm text-black leading-relaxed">{selectedProj.description}</p>
+
+              <div className="grid grid-cols-2 gap-2 text-xs font-bold">
+                <div className="p-3 bg-gray-50 border border-black rounded-xl">
+                  <span className="text-[10px] text-black/60 block">Region Jurisdiction</span>
+                  <span className="text-black">{selectedProj.region}</span>
                 </div>
-              ))}
+                <div className="p-3 bg-gray-50 border border-black rounded-xl">
+                  <span className="text-[10px] text-black/60 block">Total Budget</span>
+                  <span className="text-black font-mono">{formatBudget(selectedProj.budget)}</span>
+                </div>
+                <div className="p-3 bg-gray-50 border border-black rounded-xl">
+                  <span className="text-[10px] text-black/60 block">Addressed Complaints</span>
+                  <span className="text-black">{selectedProj.requestsAddressed} verified logs</span>
+                </div>
+                <div className="p-3 bg-gray-50 border border-black rounded-xl">
+                  <span className="text-[10px] text-black/60 block">Citizens Benefited</span>
+                  <span className="text-black">~{(selectedProj.affectedPopulation || 12000).toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Status Update Controls */}
+              <div className="p-4 bg-brand-yellow/30 border-2 border-black rounded-2xl space-y-3">
+                <span className="font-heading font-extrabold text-xs uppercase text-black">
+                  Update Project Lifecycle State
+                </span>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-black/70 mb-1">Status State</label>
+                    <select
+                      value={newStatus}
+                      onChange={e => setNewStatus(e.target.value as Project['status'])}
+                      className="w-full bg-white border-2 border-black rounded-xl p-2 font-bold text-xs"
+                    >
+                      <option value="proposed">PROPOSED</option>
+                      <option value="planning">PLANNED</option>
+                      <option value="in_progress">IN PROGRESS</option>
+                      <option value="completed">COMPLETED</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-black/70 mb-1">Progress ({newProgress}%)</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={newProgress}
+                      onChange={e => setNewProgress(Number(e.target.value))}
+                      className="w-full accent-black mt-2 cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleUpdateStatus}
+                  className="btn-brutal-primary w-full py-2.5 rounded-xl text-xs font-extrabold"
+                >
+                  Save Project Milestone &rarr;
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-black/10">
+              <button
+                onClick={() => setSelectedProj(null)}
+                className="btn-brutal-secondary px-5 py-2 rounded-xl text-xs font-bold"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

@@ -1,217 +1,417 @@
-import React, { useState } from 'react';
-import { Search, Filter, MapPin, Calendar, Eye, ChevronDown, Mic } from 'lucide-react';
-import { requestService } from '../../services/requestService';
+import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import {
+  Search,
+  Eye,
+  CheckCircle,
+  X,
+  Send,
+  Sparkles,
+  ArrowUpDown,
+} from 'lucide-react';
+import { requestService, useCitizenRequests } from '../../services/requestService';
+import { authService } from '../../services/authService';
+import StatusBadge from '../../components/common/StatusBadge';
+import PriorityBadge from '../../components/common/PriorityBadge';
+import CategoryBadge from '../../components/common/CategoryBadge';
 import type { CitizenRequest, RequestStatus } from '../../types';
 
-const STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-  under_review: 'bg-blue-100 text-blue-700 border-blue-200',
-  in_progress: 'bg-orange-100 text-orange-700 border-orange-200',
-  resolved: 'bg-green-100 text-green-700 border-green-200',
-  rejected: 'bg-red-100 text-red-700 border-red-200',
-};
-
-const SEV_COLORS: Record<string, string> = {
-  critical: 'text-red-600 bg-red-50',
-  high: 'text-orange-600 bg-orange-50',
-  medium: 'text-yellow-600 bg-yellow-50',
-  low: 'text-green-600 bg-green-50',
-};
-
-const CAT_COLORS: Record<string, string> = {
-  Roads: 'bg-blue-100 text-blue-700',
-  Water: 'bg-cyan-100 text-cyan-700',
-  Electricity: 'bg-yellow-100 text-yellow-700',
-  Healthcare: 'bg-red-100 text-red-700',
-  Education: 'bg-purple-100 text-purple-700',
-  Transport: 'bg-orange-100 text-orange-700',
-  Sanitation: 'bg-green-100 text-green-700',
-  'Digital Infrastructure': 'bg-indigo-100 text-indigo-700',
-  'Public Facilities': 'bg-teal-100 text-teal-700',
-};
-
 export default function GovRequests() {
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<RequestStatus | 'all'>('all');
-  const [severityFilter, setSeverityFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [selected, setSelected] = useState<CitizenRequest | null>(null);
+  const [searchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
 
-  let requests = requestService.getAll();
-  if (statusFilter !== 'all') requests = requests.filter(r => r.status === statusFilter);
-  if (severityFilter !== 'all') requests = requests.filter(r => r.aiAnalysis.severity === severityFilter);
-  if (categoryFilter !== 'all') requests = requests.filter(r => r.category === categoryFilter);
-  if (search) requests = requests.filter(r =>
-    r.description.toLowerCase().includes(search.toLowerCase()) ||
-    r.category.toLowerCase().includes(search.toLowerCase()) ||
-    r.location.toLowerCase().includes(search.toLowerCase())
-  );
+  const { requests, loading } = useCitizenRequests();
+  const [search, setSearch] = useState(initialSearch);
+  const [statusFilter, setStatusFilter] = useState<RequestStatus | 'all'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('All');
+  const [priorityFilter, setPriorityFilter] = useState<string>('All');
+  const [regionFilter, setRegionFilter] = useState<string>('All');
+  const [sortBy, setSortBy] = useState<'date' | 'priority' | 'affected'>('date');
+
+  // Modal detail & live status updater
+  const [selectedReq, setSelectedReq] = useState<CitizenRequest | null>(null);
+  const [newStatus, setNewStatus] = useState<RequestStatus>('in_progress');
+  const [officialNote, setOfficialNote] = useState('');
+  const [resolutionDate, setResolutionDate] = useState('2026-10-15');
+  const [updating, setUpdating] = useState(false);
+  const [updateSuccess, setUpdateSuccess] = useState(false);
+
+  const handleOpenModal = (req: CitizenRequest) => {
+    setSelectedReq(req);
+    setNewStatus(req.status);
+    setOfficialNote(req.officialResponse?.message || '');
+    setResolutionDate(req.officialResponse?.estimatedResolution || '2026-10-15');
+    setUpdateSuccess(false);
+  };
+
+  const handleUpdateStatus = () => {
+    if (!selectedReq) return;
+    setUpdating(true);
+
+    setTimeout(() => {
+      const currentUser = authService.getCurrentUser();
+      const updated = requestService.updateStatus(selectedReq.id, newStatus, {
+        message: officialNote.trim() || `Status updated to ${newStatus.replace('_', ' ').toUpperCase()} by ${currentUser?.name || 'Department Officer'}.`,
+        updatedAt: new Date().toISOString(),
+        officialName: currentUser?.name || 'Government Official',
+        officialRole: currentUser?.organization || (currentUser?.designation && currentUser?.department ? `${currentUser.designation} • ${currentUser.department}` : 'Authorized Department Official'),
+        estimatedResolution: resolutionDate,
+      });
+
+      setUpdating(false);
+      setUpdateSuccess(true);
+      if (updated) {
+        setSelectedReq(updated);
+      }
+    }, 600);
+  };
+
+  // Filtering
+  const filtered = requests
+    .filter(req => {
+      if (statusFilter !== 'all' && req.status !== statusFilter) return false;
+      if (categoryFilter !== 'All' && req.category !== categoryFilter) return false;
+      if (priorityFilter !== 'All' && req.priority !== priorityFilter.toLowerCase()) return false;
+      if (regionFilter !== 'All' && !req.location.toLowerCase().includes(regionFilter.toLowerCase())) return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const match =
+          req.id.toLowerCase().includes(q) ||
+          req.description.toLowerCase().includes(q) ||
+          req.location.toLowerCase().includes(q) ||
+          req.category.toLowerCase().includes(q);
+        if (!match) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'date') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      if (sortBy === 'affected') return (b.affectedCount || 0) - (a.affectedCount || 0);
+      return (b.priority === 'high' ? 2 : 1) - (a.priority === 'high' ? 2 : 1);
+    });
+
+  const regions = ['All', 'Bhubaneswar', 'Cuttack', 'Kalahandi', 'Koraput', 'Malkangiri', 'Rayagada', 'Nuapada'];
+  const categories = ['All', 'Roads', 'Water', 'Streetlights', 'Drainage', 'Public Transport', 'Schools & Hospitals', 'Electricity', 'Sanitation'];
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-brand-yellow card-brutal rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">All Requests</h1>
-          <p className="text-slate-500 text-sm">{requests.length} requests matching current filters</p>
+          <h1 className="font-heading font-extrabold text-3xl md:text-4xl text-black">
+            ALL CITIZEN GRIEVANCES
+          </h1>
+          <p className="font-medium text-sm text-black/75 mt-1">
+            Centralized triage queue with live status dispatch and explainable NLP diagnostics.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-3 py-2 rounded-lg text-sm hover:bg-slate-50 transition-colors">
-            <Calendar size={15} />
-            Sep 2026
-            <ChevronDown size={14} />
-          </button>
+        <div className="flex items-center gap-3">
+          {loading && (
+            <span className="px-3 py-1.5 bg-black text-brand-yellow rounded-xl text-xs font-mono font-bold animate-pulse">
+              Syncing Live Data...
+            </span>
+          )}
+          <div className="flex items-center gap-2 font-mono font-extrabold text-xs bg-black text-brand-yellow px-4 py-2 rounded-xl shadow-brutal-sm">
+            <span>Total Records: {filtered.length}</span>
+          </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-        <div className="grid grid-cols-4 gap-3">
-          <div className="relative col-span-2">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      {/* Filter Toolbar */}
+      <div className="bg-white card-brutal rounded-2xl p-5 space-y-4">
+        {/* Search & Sort */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="sm:col-span-2 relative">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/40" />
             <input
+              type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search requests..."
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:bg-white transition-all"
+              placeholder="Search by Request ID, category, keyword, district..."
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-black rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-black"
             />
           </div>
-          <div className="relative">
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-black/60 shrink-0 flex items-center gap-1">
+              <ArrowUpDown size={13} />
+              Sort:
+            </span>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as any)}
+              className="w-full bg-white border-2 border-black rounded-xl px-3 py-2 text-xs font-bold focus:outline-none cursor-pointer"
+            >
+              <option value="date">Most Recent Date</option>
+              <option value="affected">Most Citizens Affected</option>
+              <option value="priority">Highest Severity Priority</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Dropdown Filters Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-black/10 text-xs font-bold">
+          {/* Status Filter */}
+          <div>
+            <label className="block text-[10px] uppercase text-black/60 mb-1">Status</label>
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value as any)}
-              className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-400 cursor-pointer"
+              className="w-full bg-gray-50 border-2 border-black rounded-xl px-3 py-2 focus:outline-none"
             >
               <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
+              <option value="pending">Submitted</option>
               <option value="under_review">Under Review</option>
               <option value="in_progress">In Progress</option>
               <option value="resolved">Resolved</option>
             </select>
-            <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           </div>
-          <div className="relative">
+
+          {/* Category Filter */}
+          <div>
+            <label className="block text-[10px] uppercase text-black/60 mb-1">Category</label>
             <select
-              value={severityFilter}
-              onChange={e => setSeverityFilter(e.target.value)}
-              className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-400 cursor-pointer"
+              value={categoryFilter}
+              onChange={e => setCategoryFilter(e.target.value)}
+              className="w-full bg-gray-50 border-2 border-black rounded-xl px-3 py-2 focus:outline-none"
             >
-              <option value="all">All Severity</option>
-              <option value="critical">Critical</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
+              {categories.map(c => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
-            <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          </div>
+
+          {/* Priority Filter */}
+          <div>
+            <label className="block text-[10px] uppercase text-black/60 mb-1">Priority</label>
+            <select
+              value={priorityFilter}
+              onChange={e => setPriorityFilter(e.target.value)}
+              className="w-full bg-gray-50 border-2 border-black rounded-xl px-3 py-2 focus:outline-none"
+            >
+              <option value="All">All Priorities</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+
+          {/* Region Filter */}
+          <div>
+            <label className="block text-[10px] uppercase text-black/60 mb-1">Region</label>
+            <select
+              value={regionFilter}
+              onChange={e => setRegionFilter(e.target.value)}
+              className="w-full bg-gray-50 border-2 border-black rounded-xl px-3 py-2 focus:outline-none"
+            >
+              {regions.map(r => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* Table Representation */}
+      <div className="bg-white card-brutal-lg rounded-3xl overflow-hidden border-2 border-black">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-left text-xs font-bold">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">ID</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Category</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Description</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Location</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Severity</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Date</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Action</th>
+              <tr className="bg-brand-yellow/40 border-b-2 border-black text-black">
+                <th className="py-3 px-4">Request ID</th>
+                <th className="py-3 px-4">Category</th>
+                <th className="py-3 px-4">Region / Location</th>
+                <th className="py-3 px-4">Date</th>
+                <th className="py-3 px-4">Priority</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4 text-right">Citizens Affected</th>
+                <th className="py-3 px-4 text-center">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {requests.map(req => (
-                <tr key={req.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs font-mono text-slate-500">{req.id}</span>
-                      {req.isVoice && <Mic size={11} className="text-purple-500" />}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${CAT_COLORS[req.category] || 'bg-slate-100 text-slate-600'}`}>
-                      {req.category}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 max-w-xs">
-                    <p className="text-sm text-slate-700 truncate">{req.description}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-xs text-slate-600 flex items-center gap-1">
-                      <MapPin size={11} />
-                      {req.location}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${SEV_COLORS[req.aiAnalysis.severity]}`}>
-                      {req.aiAnalysis.severity}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium border capitalize ${STATUS_COLORS[req.status]}`}>
-                      {req.status.replace('_', ' ')}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-xs text-slate-500">
-                      {new Date(req.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => setSelected(req)}
-                      className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-medium transition-colors"
-                    >
-                      <Eye size={13} />
-                      View
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {requests.length === 0 && (
+            <tbody className="divide-y divide-black/10">
+              {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-slate-400">
-                    No requests match the current filters
+                  <td colSpan={8} className="text-center py-12 text-black/50 text-sm">
+                    No requests match the selected filters.
                   </td>
                 </tr>
+              ) : (
+                filtered.map(req => (
+                  <tr key={req.id} className="hover:bg-brand-yellow/15 transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-extrabold text-black">{req.id}</td>
+                    <td className="py-3.5 px-4">
+                      <CategoryBadge category={req.category} size="sm" />
+                    </td>
+                    <td className="py-3.5 px-4 text-black">
+                      <span className="truncate block max-w-44">{req.location}</span>
+                    </td>
+                    <td className="py-3.5 px-4 font-mono text-black/70">
+                      {new Date(req.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <PriorityBadge priority={req.priority || 'medium'} size="sm" />
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <StatusBadge status={req.status} size="sm" />
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-mono font-extrabold text-black">
+                      {(req.affectedCount || 8500).toLocaleString()}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <button
+                        onClick={() => handleOpenModal(req)}
+                        className="btn-brutal-primary px-3 py-1.5 rounded-lg text-[10px] font-extrabold inline-flex items-center gap-1"
+                      >
+                        <Eye size={12} />
+                        <span>Manage &rarr;</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Request Detail Modal */}
-      {selected && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
-          <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-slate-800">Request Details</h3>
-              <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-slate-600 text-xl font-light">×</button>
+      {/* Official Management & Status Update Modal */}
+      {selectedReq && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setSelectedReq(null)}
+        >
+          <div
+            className="bg-white card-brutal-xl rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-brand-yellow p-5 border-b-2 border-black flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-extrabold text-xs bg-black text-brand-yellow px-2 py-0.5 rounded">
+                    {selectedReq.id}
+                  </span>
+                  <CategoryBadge category={selectedReq.category} size="md" />
+                </div>
+                <h3 className="font-heading font-extrabold text-xl text-black mt-1">
+                  OFFICIAL ACTION & DISPATCH
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedReq(null)}
+                className="w-8 h-8 bg-white border-2 border-black rounded-lg flex items-center justify-center font-extrabold hover:bg-black hover:text-white transition-colors"
+              >
+                <X size={16} />
+              </button>
             </div>
-            <div className="space-y-3">
-              <div className="flex gap-2 flex-wrap">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${CAT_COLORS[selected.category]}`}>{selected.category}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium border capitalize ${STATUS_COLORS[selected.status]}`}>{selected.status.replace('_', ' ')}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${SEV_COLORS[selected.aiAnalysis.severity]}`}>{selected.aiAnalysis.severity}</span>
-              </div>
-              <p className="text-sm text-slate-700">{selected.description}</p>
-              <div className="grid grid-cols-2 gap-3 mt-4">
-                <div className="bg-slate-50 rounded-lg p-3">
-                  <p className="text-xs text-slate-500 mb-0.5">Location</p>
-                  <p className="text-sm font-medium">{selected.location}</p>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-3">
-                  <p className="text-xs text-slate-500 mb-0.5">Subcategory</p>
-                  <p className="text-sm font-medium">{selected.aiAnalysis.subcategory}</p>
+
+            {/* Modal Scrollable Body */}
+            <div className="p-6 overflow-y-auto space-y-5 flex-1 text-xs">
+              {/* Grievance Statement */}
+              <div className="p-4 bg-gray-50 border-2 border-black rounded-2xl space-y-1">
+                <span className="font-extrabold uppercase text-black/60 text-[10px]">Citizen Statement</span>
+                <p className="font-medium text-sm text-black leading-relaxed">{selectedReq.description}</p>
+                <div className="flex items-center gap-3 pt-2 text-black/60 font-bold text-[11px]">
+                  <span>📍 {selectedReq.location}</span>
+                  <span>🗓 {new Date(selectedReq.createdAt).toLocaleDateString('en-IN')}</span>
+                  <span>👥 ~{(selectedReq.affectedCount || 8500).toLocaleString()} citizens affected</span>
                 </div>
               </div>
-              <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
-                <p className="text-xs text-blue-600 font-medium mb-1">AI Summary</p>
-                <p className="text-sm text-slate-700">{selected.aiAnalysis.summary}</p>
+
+              {/* Photo if any */}
+              {selectedReq.imageUrl && (
+                <div className="border-2 border-black rounded-xl overflow-hidden max-h-48">
+                  <img src={selectedReq.imageUrl} alt="Defect" className="w-full object-cover" />
+                </div>
+              )}
+
+              {/* AI Technical Analysis */}
+              <div className="p-3.5 bg-brand-yellow/30 border-2 border-black rounded-2xl space-y-1.5">
+                <div className="flex items-center gap-1.5 font-extrabold uppercase text-[10px] text-black">
+                  <Sparkles size={13} />
+                  <span>Explainable AI Synthesis</span>
+                </div>
+                <p className="font-medium text-black/90">{selectedReq.aiAnalysis.summary}</p>
               </div>
+
+              {/* Status Update Form (Live Updater) */}
+              <div className="p-5 bg-brand-charcoal text-white border-2 border-black rounded-2xl space-y-4">
+                <h4 className="font-heading font-extrabold text-base text-brand-yellow uppercase">
+                  Update Grievance Status
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-extrabold uppercase text-brand-sage mb-1">
+                      New Status State *
+                    </label>
+                    <select
+                      value={newStatus}
+                      onChange={e => setNewStatus(e.target.value as RequestStatus)}
+                      className="w-full bg-white text-black font-extrabold border-2 border-brand-yellow rounded-xl px-3 py-2 text-xs focus:outline-none"
+                    >
+                      <option value="pending">SUBMITTED (Pending Assessment)</option>
+                      <option value="under_review">UNDER REVIEW (Inspection Assigned)</option>
+                      <option value="in_progress">IN PROGRESS (Work Order Sanctioned)</option>
+                      <option value="resolved">RESOLVED (Rectified & Completed)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-extrabold uppercase text-brand-sage mb-1">
+                      Target Completion Date
+                    </label>
+                    <input
+                      type="date"
+                      value={resolutionDate}
+                      onChange={e => setResolutionDate(e.target.value)}
+                      className="w-full bg-white text-black font-bold border-2 border-brand-yellow rounded-xl px-3 py-2 text-xs focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase text-brand-sage mb-1">
+                    Official Response / Engineering Note (Visible to Citizen) *
+                  </label>
+                  <textarea
+                    value={officialNote}
+                    onChange={e => setOfficialNote(e.target.value)}
+                    rows={3}
+                    placeholder="Enter public engineering dispatch notes, contractor details, or resolution summary..."
+                    className="w-full bg-white text-black font-medium border-2 border-brand-yellow rounded-xl p-3 text-xs focus:outline-none"
+                  />
+                </div>
+
+                {updateSuccess && (
+                  <div className="p-2.5 bg-emerald-900/80 border border-emerald-400 rounded-xl text-emerald-300 font-extrabold text-xs flex items-center gap-2">
+                    <CheckCircle size={15} />
+                    <span>Status updated successfully & synced with citizen portal!</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-gray-50 border-t-2 border-black flex items-center justify-between">
+              <button
+                onClick={() => setSelectedReq(null)}
+                className="btn-brutal-secondary px-5 py-2.5 rounded-xl text-xs font-bold"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleUpdateStatus}
+                disabled={updating}
+                className="btn-brutal-primary px-6 py-2.5 rounded-xl text-xs font-extrabold flex items-center gap-2 disabled:opacity-50"
+              >
+                <Send size={13} />
+                <span>{updating ? 'Updating...' : 'Publish Official Update →'}</span>
+              </button>
             </div>
           </div>
         </div>

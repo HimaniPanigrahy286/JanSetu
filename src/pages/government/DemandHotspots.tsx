@@ -1,191 +1,276 @@
-import React, { useState } from 'react';
-import { MapPin, Filter, ChevronDown, Info } from 'lucide-react';
-import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Flame,
+  FolderPlus,
+  CheckCircle,
+  X,
+} from 'lucide-react';
 import { analyticsService } from '../../services/analyticsService';
-
-const SCORE_BREAKDOWN = [
-  { label: 'Citizen Demand', weight: 35, color: 'bg-brand-yellow' },
-  { label: 'Infrastructure Gap', weight: 25, color: 'bg-brand-sage' },
-  { label: 'Population Impact', weight: 20, color: 'bg-black' },
-  { label: 'Severity Level', weight: 10, color: 'bg-red-500' },
-  { label: 'Investment Gap', weight: 10, color: 'bg-orange-500' },
-];
+import { projectService } from '../../services/projectService';
+import { useCitizenRequests } from '../../services/requestService';
+import MapHotspotsView from '../../components/common/MapHotspotsView';
+import PriorityBadge from '../../components/common/PriorityBadge';
+import CategoryBadge from '../../components/common/CategoryBadge';
+import type { Hotspot } from '../../types';
 
 export default function DemandHotspots() {
-  const hotspots = analyticsService.getHotspots();
-  const [selectedRegion, setSelectedRegion] = useState(hotspots[0]);
-  const [countryFilter, setCountryFilter] = useState('All');
-  const [categoryFilter, setCategoryFilter] = useState('All');
+  const navigate = useNavigate();
+  const { requests } = useCitizenRequests();
+  const allHotspots = analyticsService.getHotspots(requests);
 
-  const radarData = [
-    { subject: 'Citizen\nDemand', value: selectedRegion.citizenDemand },
-    { subject: 'Infra Gap', value: selectedRegion.infrastructureGap },
-    { subject: 'Population\nImpact', value: selectedRegion.populationImpact },
-    { subject: 'Investment\nGap', value: selectedRegion.investmentGap },
-    { subject: 'Requests', value: Math.round(selectedRegion.requestCount / 30) },
-  ];
+  const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(() => allHotspots[0] || null);
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [projectTitle, setProjectTitle] = useState('');
+  const [projectBudget, setProjectBudget] = useState(25000000);
+  const [projectDesc, setProjectDesc] = useState('');
+  const [projectCreated, setProjectCreated] = useState(false);
 
-  const getPriorityColor = (score: number) => {
-    if (score >= 80) return { text: 'text-red-700', bg: 'bg-red-100', border: 'border-red-600', bar: 'bg-red-600' };
-    if (score >= 70) return { text: 'text-orange-700', bg: 'bg-orange-100', border: 'border-orange-600', bar: 'bg-orange-500' };
-    if (score >= 60) return { text: 'text-black', bg: 'bg-brand-yellow', border: 'border-black', bar: 'bg-brand-yellow' };
-    return { text: 'text-black', bg: 'bg-brand-sage', border: 'border-black', bar: 'bg-brand-sage' };
+  const handleProposeProjectClick = (hotspot: Hotspot) => {
+    setSelectedHotspot(hotspot);
+    setProjectTitle(`${hotspot.region} — ${hotspot.category} Urgent Capital Rehabilitation`);
+    setProjectDesc(
+      `Directly addresses ${hotspot.requestCount} clustered citizen complaints in ${hotspot.region}. ${hotspot.summary}`
+    );
+    setProjectBudget(hotspot.requestCount > 100 ? 45000000 : 22000000);
+    setProjectModalOpen(true);
+    setProjectCreated(false);
+  };
+
+  const handleCreateProject = () => {
+    if (!selectedHotspot) return;
+    projectService.createProject(
+      projectTitle,
+      selectedHotspot.category,
+      selectedHotspot.region,
+      projectBudget,
+      projectDesc,
+      selectedHotspot.priority,
+      selectedHotspot.requestCount,
+      selectedHotspot.affectedPopulation
+    );
+    setProjectCreated(true);
+    setTimeout(() => {
+      setProjectModalOpen(false);
+      navigate('/government/projects');
+    }, 1200);
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-brand-yellow card-brutal rounded-2xl p-6">
-        <h1 className="font-heading font-extrabold text-3xl">DEMAND HOTSPOTS</h1>
-        <p className="font-medium text-sm mt-1 text-black/70">AI-identified high-priority infrastructure deficit zones</p>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white card-brutal rounded-2xl p-4 flex gap-3 flex-wrap">
-        {[
-          { label: 'Country', value: countryFilter, onChange: setCountryFilter, options: ['All', 'India', 'Brazil', 'China', 'South Africa'] },
-          { label: 'Category', value: categoryFilter, onChange: setCategoryFilter, options: ['All', 'Roads', 'Water', 'Electricity', 'Healthcare', 'Education'] },
-        ].map(f => (
-          <div key={f.label} className="relative">
-            <select
-              value={f.value}
-              onChange={e => f.onChange(e.target.value)}
-              className="appearance-none bg-white border-2 border-black rounded-xl px-4 py-2.5 pr-10 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-black cursor-pointer"
-            >
-              {f.options.map(o => <option key={o}>{o}</option>)}
-            </select>
-            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-black pointer-events-none" />
+      {/* Page Header */}
+      <div className="bg-brand-yellow card-brutal rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border-2 border-black rounded-full shadow-brutal-sm text-xs font-extrabold uppercase tracking-wider mb-2">
+            <Flame size={13} className="text-red-500" />
+            AI Demand Clustering Engine
           </div>
-        ))}
-        <button className="btn-brutal-primary flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm ml-auto">
-          <Filter size={16} />
-          Apply Filters
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Hotspot Table */}
-        <div className="lg:col-span-2 bg-white card-brutal rounded-2xl overflow-hidden">
-          <div className="bg-brand-charcoal px-6 py-4 flex items-center gap-3">
-            <div className="w-8 h-8 bg-brand-yellow border-2 border-brand-yellow rounded-lg flex items-center justify-center font-extrabold text-sm">🗺️</div>
-            <div>
-              <p className="text-white font-heading font-extrabold">REGION ANALYSIS</p>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm font-body">
-              <thead>
-                <tr className="border-b-2 border-black bg-brand-sage">
-                  <th className="text-left px-5 py-3 font-extrabold text-xs uppercase tracking-widest">Region</th>
-                  <th className="text-right px-5 py-3 font-extrabold text-xs uppercase tracking-widest">Requests</th>
-                  <th className="text-right px-5 py-3 font-extrabold text-xs uppercase tracking-widest">Infra Gap</th>
-                  <th className="text-right px-5 py-3 font-extrabold text-xs uppercase tracking-widest">Priority</th>
-                </tr>
-              </thead>
-              <tbody>
-                {hotspots.map((region, i) => {
-                  const pc = getPriorityColor(region.priorityScore);
-                  const isSelected = selectedRegion.id === region.id;
-                  return (
-                    <tr
-                      key={region.id}
-                      onClick={() => setSelectedRegion(region)}
-                      className={`cursor-pointer border-b border-black/10 transition-colors ${
-                        isSelected ? 'bg-black text-white' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                      } ${!isSelected && 'hover:bg-brand-yellow/20'}`}
-                    >
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-3 h-3 border-2 border-black rounded-full ${pc.bar}`} />
-                          <div>
-                            <p className={`font-bold ${isSelected ? 'text-brand-yellow' : 'text-black'}`}>{region.name}</p>
-                            <p className={`text-xs font-medium ${isSelected ? 'text-white/60' : 'text-black/50'}`}>{region.country}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className={`px-5 py-4 text-right font-bold ${isSelected ? 'text-white' : 'text-black'}`}>
-                        {region.requestCount.toLocaleString()}
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        <span className="font-bold text-orange-600">{region.infrastructureGap}%</span>
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        <span className={`px-2.5 py-1 border-2 rounded-lg text-[10px] font-extrabold uppercase tracking-wider ${
-                          isSelected ? 'bg-white border-white text-black' : `${pc.bg} ${pc.border} ${pc.text}`
-                        }`}>
-                          {region.priorityScore}/100
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <h1 className="font-heading font-extrabold text-3xl md:text-4xl text-black">
+            DEMAND HOTSPOTS INTELLIGENCE
+          </h1>
+          <p className="font-medium text-sm text-black/75 mt-1">
+            Geospatial concentration of similar citizen grievances mapped to assist infrastructure planning.
+          </p>
         </div>
 
-        {/* Score Breakdown Panel */}
-        <div className="space-y-5">
-          {/* Selected Region Details */}
-          <div className="bg-white card-brutal rounded-2xl p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-brand-sage border-2 border-black rounded-xl flex items-center justify-center">
-                <MapPin size={20} className="text-black" />
-              </div>
-              <h3 className="font-heading font-extrabold text-xl">{selectedRegion.name}</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="text-center p-3 border-2 border-black rounded-xl bg-brand-yellow">
-                <p className="text-3xl font-heading font-extrabold">{selectedRegion.priorityScore}</p>
-                <p className="font-bold text-xs uppercase tracking-widest mt-1">Priority</p>
-              </div>
-              <div className="text-center p-3 border-2 border-black rounded-xl bg-black text-white">
-                <p className="text-3xl font-heading font-extrabold text-brand-yellow">{selectedRegion.requestCount.toLocaleString()}</p>
-                <p className="font-bold text-xs uppercase tracking-widest mt-1">Requests</p>
-              </div>
-            </div>
-            <div className="border-2 border-black rounded-xl overflow-hidden pt-2 bg-gray-50">
-              <ResponsiveContainer width="100%" height={180}>
-                <RadarChart data={radarData}>
-                  <PolarGrid stroke="#000000" strokeOpacity={0.2} />
-                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fontWeight: 700, fill: '#000000' }} />
-                  <Radar dataKey="value" stroke="#000000" strokeWidth={2} fill="#ffe17c" fillOpacity={0.8} />
-                  <Tooltip contentStyle={{ border: '2px solid #000', borderRadius: '8px', fontWeight: 700, backgroundColor: '#fff' }} />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+        <div className="p-3 bg-white border-2 border-black rounded-xl shadow-brutal-sm text-xs font-bold text-black/75 max-w-xs">
+          <span className="text-black font-extrabold">DEMO TELEMETRY: </span>
+          Real-time AI spatial clustering fusing voice, text & photo coordinates without external API fees.
+        </div>
+      </div>
 
-          {/* Score Breakdown */}
-          <div className="bg-white card-brutal rounded-2xl p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 bg-brand-yellow border-2 border-black rounded-lg flex items-center justify-center">
-                <Info size={16} className="text-black" />
-              </div>
-              <h3 className="font-heading font-extrabold text-lg uppercase">Score Breakdown</h3>
-            </div>
-            <div className="space-y-4">
-              {SCORE_BREAKDOWN.map(item => (
-                <div key={item.label}>
-                  <div className="flex justify-between font-bold text-xs uppercase tracking-wider mb-1.5">
-                    <span>{item.label}</span>
-                    <span>{item.weight}%</span>
-                  </div>
-                  <div className="h-2.5 bg-black/10 border border-black/20 rounded-full">
-                    <div className={`h-full ${item.color} rounded-full border-r border-black`} style={{ width: `${item.weight * 2.5}%` }} />
+      {/* Main Interactive Map Section */}
+      <MapHotspotsView
+        hotspots={allHotspots}
+        selectedHotspot={selectedHotspot}
+        onSelectHotspot={setSelectedHotspot}
+        onProposeProject={handleProposeProjectClick}
+      />
+
+      {/* Hotspots Grid Cards Section (As detailed in prompt) */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-heading font-extrabold text-2xl">PRIORITY HOTSPOT QUEUE</h2>
+            <p className="text-xs font-bold text-black/60">Ranked by population impact and infrastructure deficit index</p>
+          </div>
+          <span className="text-xs font-mono font-bold bg-white border-2 border-black px-3 py-1 rounded-xl">
+            {allHotspots.length} Active Hotspots
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {allHotspots.map((h, idx) => (
+            <div
+              key={h.id}
+              onClick={() => setSelectedHotspot(h)}
+              className={`bg-white card-brutal rounded-2xl p-5 flex flex-col justify-between transition-all cursor-pointer hover:border-black ${
+                selectedHotspot?.id === h.id ? 'ring-4 ring-black bg-brand-yellow/10' : ''
+              }`}
+            >
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-mono text-xs font-extrabold bg-brand-yellow text-black border border-black px-2.5 py-1 rounded-lg">
+                    HOTSPOT #{idx + 1}
+                  </span>
+                  <PriorityBadge priority={h.priority} size="sm" />
+                </div>
+
+                <div>
+                  <h3 className="font-heading font-extrabold text-xl text-black">{h.region}</h3>
+                  <div className="mt-1">
+                    <CategoryBadge category={h.category} size="md" />
                   </div>
                 </div>
-              ))}
+
+                <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
+                  <div className="p-2.5 bg-gray-50 border border-black/20 rounded-xl">
+                    <p className="text-[10px] uppercase font-extrabold text-black/50">Grievances</p>
+                    <p className="font-heading font-extrabold text-lg text-black mt-0.5">{h.requestCount}</p>
+                  </div>
+                  <div className="p-2.5 bg-gray-50 border border-black/20 rounded-xl">
+                    <p className="text-[10px] uppercase font-extrabold text-black/50">Citizens Affected</p>
+                    <p className="font-heading font-extrabold text-lg text-black mt-0.5">
+                      {(h.affectedPopulation / 1000).toFixed(1)}k
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-xs font-medium text-black/80 line-clamp-2 leading-relaxed">{h.summary}</p>
+              </div>
+
+              <div className="pt-4 mt-3 border-t-2 border-black/10 flex items-center justify-between gap-2">
+                <span className="text-[11px] font-extrabold text-emerald-700">{h.trend}</span>
+                <button
+                  type="button"
+                  onClick={e => {
+                    e.stopPropagation();
+                    handleProposeProjectClick(h);
+                  }}
+                  className="btn-brutal-secondary px-3 py-1.5 rounded-lg text-[10px] font-extrabold inline-flex items-center gap-1"
+                >
+                  <FolderPlus size={12} />
+                  <span>Propose Project</span>
+                </button>
+              </div>
             </div>
-            <div className="mt-5 pt-4 border-t-2 border-black/10">
-              <p className="font-medium text-xs text-black/60 leading-relaxed">
-                <span className="font-extrabold text-black uppercase tracking-wider">Note:</span> This is a decision-support indicator. Final decisions remain with authorized officials.
-              </p>
+          ))}
+        </div>
+      </div>
+
+      {/* Propose Infrastructure Project Modal */}
+      {projectModalOpen && selectedHotspot && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setProjectModalOpen(false)}
+        >
+          <div
+            className="bg-white card-brutal-xl rounded-3xl max-w-xl w-full p-6 md:p-8 space-y-5 animate-in zoom-in-95 duration-150"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-2 pb-3 border-b-2 border-black">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-extrabold bg-brand-yellow px-2 py-0.5 border border-black rounded">
+                    HOTSPOT ORIGIN
+                  </span>
+                  <CategoryBadge category={selectedHotspot.category} size="sm" />
+                </div>
+                <h3 className="font-heading font-extrabold text-xl text-black mt-1">
+                  PROPOSE INFRASTRUCTURE PROJECT
+                </h3>
+              </div>
+              <button
+                onClick={() => setProjectModalOpen(false)}
+                className="w-8 h-8 bg-white border-2 border-black rounded-lg flex items-center justify-center font-extrabold hover:bg-black hover:text-white transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="block font-extrabold uppercase text-[10px] text-black/70 mb-1">
+                  Project Title *
+                </label>
+                <input
+                  type="text"
+                  value={projectTitle}
+                  onChange={e => setProjectTitle(e.target.value)}
+                  className="w-full border-2 border-black rounded-xl p-3 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-extrabold uppercase text-[10px] text-black/70 mb-1">
+                    Region Jurisdiction
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value={selectedHotspot.region}
+                    className="w-full bg-gray-100 border-2 border-black rounded-xl p-3 font-bold text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-extrabold uppercase text-[10px] text-black/70 mb-1">
+                    Estimated Budget (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={projectBudget}
+                    onChange={e => setProjectBudget(Number(e.target.value))}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-black"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-extrabold uppercase text-[10px] text-black/70 mb-1">
+                  Scope & Justification (Derived from {selectedHotspot.requestCount} Citizen Logs)
+                </label>
+                <textarea
+                  value={projectDesc}
+                  onChange={e => setProjectDesc(e.target.value)}
+                  rows={3}
+                  className="w-full border-2 border-black rounded-xl p-3 font-medium text-xs focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+
+              <div className="p-3 bg-brand-yellow/30 border-2 border-black rounded-xl space-y-1">
+                <span className="font-extrabold text-[10px] uppercase text-black">Project Impact Forecast</span>
+                <p className="font-bold text-black">
+                  Directly addresses {selectedHotspot.requestCount} verified complaints and benefits ~
+                  {selectedHotspot.affectedPopulation.toLocaleString()} citizens.
+                </p>
+              </div>
+
+              {projectCreated && (
+                <div className="p-3 bg-emerald-100 border-2 border-emerald-600 rounded-xl text-emerald-800 font-extrabold text-xs flex items-center gap-2">
+                  <CheckCircle size={16} />
+                  <span>Project successfully added to the Projects Pipeline!</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-black/10">
+              <button
+                onClick={() => setProjectModalOpen(false)}
+                className="btn-brutal-secondary flex-1 py-2.5 rounded-xl text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateProject}
+                className="btn-brutal-primary flex-1 py-2.5 rounded-xl text-xs font-extrabold"
+              >
+                Create Project &rarr;
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
-

@@ -7,43 +7,89 @@ interface LanguageMap {
 const LANGUAGE_PATTERNS: LanguageMap = {
   odia: {
     name: 'Odia',
-    sample: 'ଆମ ଗାଁକୁ ଭଲ ରାସ୍ତା ନାହିଁ।',
-    translation: 'There is no proper road to our village.',
+    sample: 'ଆମ ଗାଁକୁ ଭଲ ରାସ୍ତା ନାହିଁ ଏବଂ ପିଇବା ପାଣି ପାଇପ୍ ଭାଙ୍ଗିଯାଇଛି।',
+    translation: 'There is no proper road to our village and the drinking water pipeline is broken.',
   },
   hindi: {
     name: 'Hindi',
-    sample: 'हमारे गांव में साफ पानी नहीं है।',
-    translation: 'There is no clean water in our village.',
+    sample: 'हमारे गांव में पीने का साफ पानी नहीं है और स्ट्रीटलाइट खराब हैं।',
+    translation: 'There is no clean drinking water in our village and streetlights are broken.',
   },
   bengali: {
     name: 'Bengali',
-    sample: 'আমাদের গ্রামে বিদ্যুৎ নেই।',
-    translation: 'There is no electricity in our village.',
+    sample: 'আমাদের গ্রামে ড্রেনেজ বন্ধ থাকায় রাস্তায় জল জমে যাচ্ছে।',
+    translation: 'In our village, blocked drains are causing severe water stagnation on the road.',
   },
   tamil: {
     name: 'Tamil',
-    sample: 'எங்கள் கிராமத்தில் சாலை இல்லை.',
-    translation: 'There is no road in our village.',
+    sample: 'எங்கள் பகுதியில் சாலைகள் பழுதடைந்துள்ளன, குடிநீர் தட்டுப்பாடு உள்ளது.',
+    translation: 'Roads in our area are severely damaged and there is a drinking water shortage.',
+  },
+  telugu: {
+    name: 'Telugu',
+    sample: 'మా గ్రామంలో రోడ్డు సరిగా లేదు మరియు విద్యుత్ కోతలు ఎక్కువగా ఉన్నాయి.',
+    translation: 'In our village roads are in bad shape and electricity cuts are frequent.',
+  },
+  english: {
+    name: 'English',
+    sample: 'The main connecting road has severe craters and ambulances cannot reach.',
+    translation: 'The main connecting road has severe craters and ambulances cannot reach.',
   },
 };
 
 const CATEGORY_KEYWORDS: { keywords: string[]; category: Category; subcategory: string }[] = [
-  { keywords: ['road', 'street', 'highway', 'path', 'bridge', 'rasta', 'raasta', 'sadak'], category: 'Roads', subcategory: 'Road Infrastructure' },
-  { keywords: ['water', 'drinking', 'pipeline', 'supply', 'pani', 'jal', 'tap'], category: 'Water', subcategory: 'Water Supply' },
-  { keywords: ['electricity', 'power', 'light', 'current', 'bijli', 'transformer'], category: 'Electricity', subcategory: 'Power Supply' },
-  { keywords: ['hospital', 'health', 'doctor', 'clinic', 'medical', 'medicine', 'healthcare'], category: 'Healthcare', subcategory: 'Healthcare Access' },
-  { keywords: ['school', 'education', 'college', 'teacher', 'student', 'study'], category: 'Education', subcategory: 'Education Infrastructure' },
-  { keywords: ['bus', 'transport', 'vehicle', 'auto', 'train', 'metro'], category: 'Transport', subcategory: 'Public Transport' },
-  { keywords: ['toilet', 'sanitation', 'sewage', 'drainage', 'garbage', 'waste'], category: 'Sanitation', subcategory: 'Sanitation Facilities' },
-  { keywords: ['internet', 'network', 'digital', 'connectivity', 'wifi', 'broadband'], category: 'Digital Infrastructure', subcategory: 'Digital Connectivity' },
-  { keywords: ['park', 'ground', 'facility', 'community', 'public', 'building'], category: 'Public Facilities', subcategory: 'Community Facilities' },
+  {
+    keywords: ['road', 'street', 'highway', 'path', 'pothole', 'bridge', 'rasta', 'raasta', 'sadak', 'crater', 'asphalt'],
+    category: 'Roads',
+    subcategory: 'Road Surface & Connectivity',
+  },
+  {
+    keywords: ['water', 'drinking', 'pipeline', 'supply', 'pani', 'jal', 'tap', 'borewell', 'chlorination', 'contamination'],
+    category: 'Water',
+    subcategory: 'Piped Water Supply & Quality',
+  },
+  {
+    keywords: ['light', 'streetlight', 'lamp', 'dark', 'bulb', 'led', 'pole', 'batti'],
+    category: 'Streetlights',
+    subcategory: 'Public Safety Streetlighting',
+  },
+  {
+    keywords: ['drain', 'drainage', 'gutter', 'waterlogging', 'flood', 'sewage', 'clogged', 'nala', 'naala', 'overflow'],
+    category: 'Drainage',
+    subcategory: 'Stormwater Drainage & Flood Control',
+  },
+  {
+    keywords: ['bus', 'transport', 'commute', 'route', 'traffic', 'vehicle', 'transit', 'stop', 'stand'],
+    category: 'Public Transport',
+    subcategory: 'Public Bus & Commuter Transit',
+  },
+  {
+    keywords: ['hospital', 'health', 'doctor', 'clinic', 'phc', 'medicine', 'school', 'classroom', 'teacher', 'ambulance', 'nurse'],
+    category: 'Schools & Hospitals',
+    subcategory: 'Healthcare & Educational Infrastructure',
+  },
+  {
+    keywords: ['electricity', 'power', 'current', 'bijli', 'voltage', 'transformer', 'wire', 'blackout', 'outage'],
+    category: 'Electricity',
+    subcategory: 'Power Grid & Microgrid Distribution',
+  },
+  {
+    keywords: ['garbage', 'trash', 'waste', 'dump', 'sanitation', 'clean', 'toilet', 'kachra'],
+    category: 'Sanitation',
+    subcategory: 'Solid Waste & Public Sanitation',
+  },
+  {
+    keywords: ['internet', 'network', 'digital', 'wifi', 'broadband', 'tower', 'connectivity', 'mobile'],
+    category: 'Digital Infrastructure',
+    subcategory: 'Broadband & Digital Tower Coverage',
+  },
 ];
 
 const SEVERITY_KEYWORDS: { keywords: string[]; severity: Severity }[] = [
-  { keywords: ['emergency', 'death', 'dying', 'critical', 'urgent', 'life', 'hospital', 'accident'], severity: 'critical' },
-  { keywords: ['no', 'not', 'without', 'lack', 'missing', 'broken', 'damaged', 'severe', 'problem'], severity: 'high' },
-  { keywords: ['poor', 'bad', 'issue', 'concern', 'need', 'require', 'improve'], severity: 'medium' },
-  { keywords: ['better', 'enhance', 'upgrade', 'request', 'suggest'], severity: 'low' },
+  { keywords: ['emergency', 'death', 'dying', 'critical', 'urgent', 'life', 'hospital', 'accident', 'ambulance', 'fatal'], severity: 'critical' },
+  { keywords: ['no', 'not', 'without', 'lack', 'broken', 'damaged', 'severe', 'problem', 'danger', 'contaminated'], severity: 'high' },
+  { keywords: ['poor', 'bad', 'issue', 'concern', 'need', 'require', 'improve', 'repair', 'irregular'], severity: 'medium' },
+  { keywords: ['better', 'enhance', 'upgrade', 'request', 'suggest', 'maintenance'], severity: 'low' },
 ];
 
 function detectCategory(text: string): { category: Category; subcategory: string } {
@@ -53,7 +99,7 @@ function detectCategory(text: string): { category: Category; subcategory: string
       return { category: item.category, subcategory: item.subcategory };
     }
   }
-  return { category: 'Roads', subcategory: 'General Infrastructure' };
+  return { category: 'Other Development', subcategory: 'Community Public Infrastructure' };
 }
 
 function detectSeverity(text: string): Severity {
@@ -66,98 +112,106 @@ function detectSeverity(text: string): Severity {
   return 'medium';
 }
 
-function generateSummary(text: string, category: Category, severity: Severity): string {
+function generateSummary(category: Category, severity: Severity): string {
   const templates: Record<Category, string[]> = {
-    'Roads': [
-      `Road infrastructure deficit identified in the reported area. Citizen reports indicate ${severity} impact on connectivity and access to essential services.`,
-      `Poor road connectivity is critically affecting daily commute and access to healthcare and markets in the reported location.`,
+    Roads: [
+      `Critical road connectivity and surface fracture reported. High potential of vehicular damage and access barriers to essential facilities (${severity} urgency).`,
+      `Severe transit impairment detected on public thoroughfare requiring prompt structural resurfacing.`,
     ],
-    'Water': [
-      `Significant water supply deficit detected. Citizens are experiencing ${severity} disruption to clean water access, posing public health risks.`,
-      `Clean drinking water shortage is affecting the reported community, requiring immediate infrastructure intervention.`,
+    Water: [
+      `Significant drinking water supply outage detected. Poses immediate sanitation risk to households in the reported ward (${severity} urgency).`,
+      `Pipeline breach impacting local drinking supply; emergency mobile tankers and valve repair recommended.`,
     ],
-    'Electricity': [
-      `Power supply irregularity identified with ${severity} impact on livelihoods, education, and economic activity in the area.`,
-      `Electricity deficit is severely disrupting daily life, education, and small businesses in the reported locality.`,
+    Streetlights: [
+      `Public lighting failure compromising nighttime visibility and pedestrian safety along the reported transit sector.`,
+      `Multi-fixture streetlighting outage reported; circuit breaker assessment and LED replacement queued.`,
     ],
-    'Healthcare': [
-      `Healthcare access gap identified. The reported area shows ${severity} deficiency in medical facilities and services.`,
-      `Inadequate healthcare infrastructure is putting lives at risk. Immediate attention to facility improvement is recommended.`,
+    Drainage: [
+      `Stormwater drain blockage and urban stagnation identified with elevated flood risk during precipitation (${severity} severity).`,
+      `Clogged arterial drainage causing water accumulation; de-silting and culvert clearance required.`,
     ],
-    'Education': [
-      `Education infrastructure gap detected with ${severity} impact on learning outcomes in the reported community.`,
-      `Poor educational facilities are hampering quality learning for children in the affected area.`,
+    'Public Transport': [
+      `Commuter transit deficit identified. Lack of reliable public bus frequencies impacting workers and students.`,
+      `Feeder public transport gap reported; recommendation to augment schedule frequency during peak hours.`,
     ],
-    'Transport': [
-      `Public transport deficit identified, affecting mobility and economic access for residents of the reported area.`,
-      `Inadequate transport connectivity is limiting economic opportunities and access to services for the community.`,
+    'Schools & Hospitals': [
+      `Critical public institutional facility gap detected in healthcare/education provision for the community.`,
+      `Inadequate facility infrastructure reported; intervention recommended to ensure uninterrupted citizen services.`,
     ],
-    'Sanitation': [
-      `Sanitation and waste management deficit detected with ${severity} public health implications in the reported area.`,
-      `Poor sanitation infrastructure poses significant health risks to the community and requires urgent intervention.`,
+    Electricity: [
+      `Power distribution irregularity and transformer strain identified with direct impact on livelihoods and agriculture.`,
+      `Low voltage and unscheduled outages detected; transformer reinforcement required.`,
+    ],
+    Sanitation: [
+      `Solid waste accumulation and sanitation deficit with public health implications in the residential locality.`,
+      `Waste disposal and sanitation infrastructure maintenance needed to restore environmental standards.`,
     ],
     'Digital Infrastructure': [
-      `Digital connectivity gap identified, limiting access to digital services, e-governance, and economic opportunities.`,
-      `Insufficient digital infrastructure is excluding the community from digital economy and government e-services.`,
+      `Digital connectivity barrier identified, restricting citizen access to digital governance and e-services.`,
     ],
-    'Public Facilities': [
-      `Public facility deficit detected in the reported area with ${severity} impact on community well-being.`,
-      `Inadequate public facilities are affecting quality of life and community cohesion in the reported locality.`,
+    'Other Development': [
+      `Community infrastructure defect logged and categorized for municipal engineering review.`,
     ],
   };
 
-  const options = templates[category];
+  const options = templates[category] || templates['Other Development'];
   return options[Math.floor(Math.random() * options.length)];
 }
 
 export const aiService = {
   async analyzeText(text: string, language: string = 'English'): Promise<AIAnalysis> {
-    // Simulate AI processing delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 1400));
 
     const { category, subcategory } = detectCategory(text);
     const severity = detectSeverity(text);
-    const summary = generateSummary(text, category, severity);
+    const summary = generateSummary(category, severity);
 
     const keywords = text
       .toLowerCase()
+      .replace(/[^\w\s]/g, '')
       .split(/\s+/)
-      .filter(w => w.length > 4)
-      .slice(0, 5);
+      .filter(w => w.length > 3)
+      .slice(0, 6);
 
     return {
       detectedLanguage: language,
       originalText: text,
-      translatedText: language === 'English' ? text : `[Translated from ${language}]: ${text}`,
+      translatedText: language === 'English' ? text : `[AI Multilingual NLP]: ${text}`,
       category,
       subcategory,
       severity,
       summary,
-      confidence: 0.85 + Math.random() * 0.12,
-      keywords,
+      confidence: Number((0.91 + Math.random() * 0.08).toFixed(2)),
+      keywords: keywords.length > 0 ? keywords : [category.toLowerCase(), 'infrastructure', 'civic'],
+      duplicateClusterCount: Math.floor(18 + Math.random() * 85),
     };
   },
 
-  async analyzeVoice(language: string): Promise<{
+  async analyzeVoice(languageKey: string): Promise<{
     transcription: string;
     translation: string;
     analysis: AIAnalysis;
   }> {
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 1600));
 
-    const langKey = language.toLowerCase();
-    const langData = LANGUAGE_PATTERNS[langKey] || LANGUAGE_PATTERNS['odia'];
+    const key = languageKey.toLowerCase();
+    const langData = LANGUAGE_PATTERNS[key] || LANGUAGE_PATTERNS['odia'];
+
+    const { category, subcategory } = detectCategory(langData.translation);
+    const severity = detectSeverity(langData.translation);
+    const summary = generateSummary(category, severity);
 
     const analysis: AIAnalysis = {
       detectedLanguage: langData.name,
       originalText: langData.sample,
       translatedText: langData.translation,
-      category: 'Roads',
-      subcategory: 'Rural Road Connectivity',
-      severity: 'high',
-      summary: 'Poor road connectivity is critically affecting access to essential services in the reported village. High citizen demand indicates urgent infrastructure intervention is needed.',
-      confidence: 0.92,
-      keywords: ['road', 'village', 'connectivity', 'access', 'infrastructure'],
+      category,
+      subcategory,
+      severity,
+      summary,
+      confidence: 0.95,
+      keywords: ['voice', category.toLowerCase(), 'village', 'connectivity', 'urgent'],
+      duplicateClusterCount: Math.floor(24 + Math.random() * 60),
     };
 
     return {
@@ -165,9 +219,5 @@ export const aiService = {
       translation: langData.translation,
       analysis,
     };
-  },
-
-  generateRecommendation(region: string, requests: number, population: number): string {
-    return `Consider prioritizing infrastructure investment in ${region} based on ${requests.toLocaleString()} citizen requests affecting approximately ${population.toLocaleString()} people. Analysis indicates significant infrastructure gaps that require coordinated government intervention across multiple sectors.`;
   },
 };
