@@ -8,10 +8,12 @@ import {
   ArrowRight,
   Sparkles,
   X,
+  Mail,
 } from 'lucide-react';
 import { authService } from '../../services/authService';
 import { requestService } from '../../services/requestService';
 import { aiService } from '../../services/aiService';
+import { sendRequestConfirmationEmail } from '../../services/emailService';
 import type { Category, AIAnalysis, Severity, PriorityLevel } from '../../types';
 import LocationPickerModal from '../../components/common/LocationPickerModal';
 import AudioVisualizer from '../../components/common/AudioVisualizer';
@@ -148,6 +150,20 @@ export default function SubmitRequest() {
 
     setCreatedRequestId(newReq.id);
     setStep('success');
+
+    // Automatically send confirmation email to citizen's registered email
+    const recipientEmail = user.email || 'citizen@demo.com';
+    sendRequestConfirmationEmail({
+      recipientEmail,
+      recipientName: user.name || 'Citizen',
+      requestId: newReq.id,
+      requestType: `${category} (${aiResult.subcategory || 'Infrastructure Grievance'})`,
+      submittedAt: newReq.createdAt,
+      location: location,
+      trackUrl: `${window.location.origin}/citizen/requests/${newReq.id}`,
+    }).catch(err => {
+      console.warn('Could not dispatch confirmation email:', err);
+    });
   };
 
   // SUCCESS VIEW
@@ -175,6 +191,19 @@ export default function SubmitRequest() {
           <div className="p-4 bg-white border-2 border-black rounded-2xl shadow-brutal-sm inline-block">
             <p className="text-[10px] font-extrabold uppercase tracking-wider text-black/60">Official Tracking ID</p>
             <p className="font-mono font-extrabold text-2xl text-black mt-0.5">{createdRequestId}</p>
+          </div>
+
+          {/* Confirmation Email Notice Banner */}
+          <div className="p-3.5 bg-white border-2 border-black rounded-2xl shadow-brutal-sm flex items-center justify-center gap-2.5 max-w-md mx-auto text-left">
+            <div className="w-8 h-8 bg-emerald-100 border border-emerald-600 rounded-xl flex items-center justify-center shrink-0 text-emerald-800 font-bold">
+              <Mail size={16} />
+            </div>
+            <div className="text-xs">
+              <p className="font-extrabold text-black">Confirmation Email Sent</p>
+              <p className="text-black/70 font-medium text-[11px]">
+                Tracking details and acknowledgment dispatched to <strong>{user.email || 'registered email'}</strong>
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">

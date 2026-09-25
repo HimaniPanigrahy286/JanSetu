@@ -220,6 +220,7 @@ export default function GovOverview() {
               <thead>
                 <tr className="border-b-2 border-black bg-brand-yellow/30 text-black">
                   <th className="py-2.5 px-3">Date</th>
+                  <th className="py-2.5 px-3">Time</th>
                   <th className="py-2.5 px-3">Tracking ID</th>
                   <th className="py-2.5 px-3">Category</th>
                   <th className="py-2.5 px-3">Location</th>
@@ -228,30 +229,38 @@ export default function GovOverview() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/10">
-                {recentTriageQueue.map(req => (
-                  <tr key={req.id} className="hover:bg-brand-yellow/10 transition-colors">
-                    <td className="py-3 px-3 font-mono text-black/70">
-                      {new Date(req.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
-                    </td>
-                    <td className="py-3 px-3 font-mono font-extrabold text-black">{req.id}</td>
-                    <td className="py-3 px-3">
-                      <CategoryBadge category={req.category} size="sm" />
-                    </td>
-                    <td className="py-3 px-3 text-black/80">{req.location}</td>
-                    <td className="py-3 px-3">
-                      <StatusBadge status={req.status} size="sm" />
-                    </td>
-                    <td className="py-3 px-3 text-right">
-                      <button
-                        onClick={() => setSelectedReq(req)}
-                        className="btn-brutal-secondary px-2.5 py-1 rounded-lg text-[10px] font-extrabold inline-flex items-center gap-1"
-                      >
-                        <Eye size={11} />
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {recentTriageQueue.map(req => {
+                  const reqDate = new Date(req.createdAt);
+                  const dateStr = reqDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+                  const timeStr = reqDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+                  return (
+                    <tr key={req.id} className="hover:bg-brand-yellow/10 transition-colors">
+                      <td className="py-3 px-3 font-mono text-black/70 whitespace-nowrap">
+                        {dateStr}
+                      </td>
+                      <td className="py-3 px-3 font-mono text-black/70 whitespace-nowrap">
+                        {timeStr}
+                      </td>
+                      <td className="py-3 px-3 font-mono font-extrabold text-black">{req.id}</td>
+                      <td className="py-3 px-3">
+                        <CategoryBadge category={req.category} size="sm" />
+                      </td>
+                      <td className="py-3 px-3 text-black/80">{req.location}</td>
+                      <td className="py-3 px-3">
+                        <StatusBadge status={req.status} size="sm" />
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <button
+                          onClick={() => setSelectedReq(req)}
+                          className="btn-brutal-secondary px-2.5 py-1 rounded-lg text-[10px] font-extrabold inline-flex items-center gap-1"
+                        >
+                          <Eye size={11} />
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
@@ -266,6 +275,9 @@ export default function GovOverview() {
               <div>
                 <span className="font-mono text-xs font-extrabold text-black/60">{selectedReq.id}</span>
                 <h3 className="font-heading font-extrabold text-xl mt-0.5">{selectedReq.category}</h3>
+                <p className="text-[11px] font-mono text-black/60 mt-0.5">
+                  Submitted: {new Date(selectedReq.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} • {new Date(selectedReq.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                </p>
               </div>
               <StatusBadge status={selectedReq.status} size="md" />
             </div>
