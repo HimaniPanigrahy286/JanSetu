@@ -3,7 +3,7 @@ import { MapPin, Globe, Mail, Save, Edit3, Camera, User as UserIcon, Phone, Brie
 import { authService } from '../../services/authService';
 import { requestService } from '../../services/requestService';
 import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { db, isFirebaseConfigured } from '../../firebase';
 import type { User } from '../../types';
 
 const PRESET_AVATARS = [
@@ -80,26 +80,28 @@ export default function CitizenProfile() {
     setUser(updatedUser);
     authService.saveUser(updatedUser);
 
-    // Save to Firestore non-blocking
-    try {
-      const firestorePromise = setDoc(
-        doc(db, 'users', user.id),
-        {
-          name: updatedUser.name,
-          location: updatedUser.location,
-          language: updatedUser.language,
-          phone: updatedUser.phone || '',
-          organization: updatedUser.organization || '',
-          bio: updatedUser.bio || '',
-          avatar: updatedUser.avatar || '',
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-      const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 2000));
-      await Promise.race([firestorePromise, timeoutPromise]);
-    } catch (err) {
-      console.warn('Firestore update warning:', err);
+    // Save to Firestore non-blocking if configured
+    if (isFirebaseConfigured) {
+      try {
+        const firestorePromise = setDoc(
+          doc(db, 'users', user.id),
+          {
+            name: updatedUser.name,
+            location: updatedUser.location,
+            language: updatedUser.language,
+            phone: updatedUser.phone || '',
+            organization: updatedUser.organization || '',
+            bio: updatedUser.bio || '',
+            avatar: updatedUser.avatar || '',
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 2000));
+        await Promise.race([firestorePromise, timeoutPromise]);
+      } catch (err) {
+        console.warn('Firestore update warning:', err);
+      }
     }
 
     setIsEditing(false);

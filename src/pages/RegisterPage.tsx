@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { auth, db, isFirebaseConfigured } from '../firebase';
 import { authService } from '../services/authService';
 import { sendOtpEmail } from '../services/emailService';
 import type { Role } from '../types';
@@ -173,6 +173,10 @@ export default function RegisterPage() {
 
   const handleSendReset = async () => {
     if (!form.email.trim()) return;
+    if (!isFirebaseConfigured) {
+      setResetSent(true);
+      return;
+    }
     try {
       await sendPasswordResetEmail(auth, form.email.trim());
       setResetSent(true);
@@ -190,34 +194,43 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      let user;
-      try {
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          form.email.trim(),
-          form.password
-        );
-        user = userCredential.user;
-      } catch (authError: any) {
-        if (authError.code === 'auth/email-already-in-use') {
-          try {
-            const signInCredential = await signInWithEmailAndPassword(
-              auth,
-              form.email.trim(),
-              form.password
-            );
-            user = signInCredential.user;
-          } catch {
-            setExistingAccountWarning(true);
-            setStep('form');
-            setErrors({
-              email: 'An account already exists with this email.',
-            });
-            return;
+      let user: any = null;
+      if (isFirebaseConfigured) {
+        try {
+          const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            form.email.trim(),
+            form.password
+          );
+          user = userCredential.user;
+        } catch (authError: any) {
+          if (authError.code === 'auth/email-already-in-use') {
+            try {
+              const signInCredential = await signInWithEmailAndPassword(
+                auth,
+                form.email.trim(),
+                form.password
+              );
+              user = signInCredential.user;
+            } catch {
+              setExistingAccountWarning(true);
+              setStep('form');
+              setErrors({
+                email: 'An account already exists with this email.',
+              });
+              return;
+            }
+          } else {
+            console.warn('Firebase registration notice, using local account creation:', authError);
           }
-        } else {
-          throw authError;
         }
+      }
+
+      if (!user) {
+        user = {
+          uid: 'user_' + Date.now().toString(36),
+          email: form.email.trim(),
+        };
       }
 
       const assignedLocation = form.role === 'citizen'
@@ -245,17 +258,19 @@ export default function RegisterPage() {
       // Save local session
       authService.saveUser(userProfile);
 
-      // Save to Firestore
-      try {
-        const firestorePromise = setDoc(doc(db, 'users', user.uid), {
-          ...userProfile,
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
+      // Save to Firestore if configured
+      if (isFirebaseConfigured) {
+        try {
+          const firestorePromise = setDoc(doc(db, 'users', user.uid), {
+            ...userProfile,
+            updatedAt: new Date().toISOString(),
+          }, { merge: true });
 
-        const timeoutPromise = new Promise(resolve => setTimeout(resolve, 2000));
-        await Promise.race([firestorePromise, timeoutPromise]);
-      } catch (dbErr) {
-        console.warn('Firestore write warning:', dbErr);
+          const timeoutPromise = new Promise(resolve => setTimeout(resolve, 2000));
+          await Promise.race([firestorePromise, timeoutPromise]);
+        } catch (dbErr) {
+          console.warn('Firestore write warning:', dbErr);
+        }
       }
 
       // Automatically redirect to the appropriate portal

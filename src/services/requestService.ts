@@ -6,7 +6,7 @@ import {
   setDoc,
   onSnapshot,
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, isFirebaseConfigured } from '../firebase';
 import {
   CATEGORY_DEPARTMENT_MAP,
 } from '../types';
@@ -97,7 +97,7 @@ export const requestService = {
    * Initializes real-time Firestore listener to keep Citizen and Government portals in sync.
    */
   initFirestoreListener(): void {
-    if (isFirestoreListenerActive) return;
+    if (isFirestoreListenerActive || !isFirebaseConfigured) return;
     isFirestoreListenerActive = true;
 
     try {
@@ -150,6 +150,9 @@ export const requestService = {
    * Asynchronously fetch all requests from Firestore
    */
   async fetchAllFromFirestore(): Promise<CitizenRequest[]> {
+    if (!isFirebaseConfigured) {
+      return inMemoryRequests;
+    }
     try {
       const colRef = collection(db, 'requests');
       const timeoutPromise = new Promise<never>((_, reject) =>
@@ -303,15 +306,17 @@ export const requestService = {
     saveRequestsToLocal(inMemoryRequests);
     notifyListeners();
 
-    // Persist to Firestore
-    try {
-      const firestorePromise = setDoc(doc(db, 'requests', newRequest.id), newRequest, { merge: true });
-      const timeoutPromise = new Promise(r => setTimeout(r, 2000));
-      Promise.race([firestorePromise, timeoutPromise]).catch(err => {
-        console.warn('Firestore write warning on create:', err);
-      });
-    } catch (e) {
-      console.warn('Error queuing Firestore request creation:', e);
+    // Persist to Firestore if configured
+    if (isFirebaseConfigured) {
+      try {
+        const firestorePromise = setDoc(doc(db, 'requests', newRequest.id), newRequest, { merge: true });
+        const timeoutPromise = new Promise(r => setTimeout(r, 2000));
+        Promise.race([firestorePromise, timeoutPromise]).catch(err => {
+          console.warn('Firestore write warning on create:', err);
+        });
+      } catch (e) {
+        console.warn('Error queuing Firestore request creation:', e);
+      }
     }
 
     return newRequest;
@@ -342,16 +347,18 @@ export const requestService = {
     saveRequestsToLocal(inMemoryRequests);
     notifyListeners();
 
-    try {
-      setDoc(doc(db, 'requests', requestId), {
-        assignedOfficerId: officerId,
-        assignedOfficerName: officerName,
-        assignedOfficerDesignation: officerDesignation,
-        status: updatedRequest.status,
-        updatedAt: updatedRequest.updatedAt,
-      }, { merge: true }).catch(err => console.warn('Assign error:', err));
-    } catch (e) {
-      console.warn('Assign officer error:', e);
+    if (isFirebaseConfigured) {
+      try {
+        setDoc(doc(db, 'requests', requestId), {
+          assignedOfficerId: officerId,
+          assignedOfficerName: officerName,
+          assignedOfficerDesignation: officerDesignation,
+          status: updatedRequest.status,
+          updatedAt: updatedRequest.updatedAt,
+        }, { merge: true }).catch(err => console.warn('Assign error:', err));
+      } catch (e) {
+        console.warn('Assign officer error:', e);
+      }
     }
 
     return updatedRequest;
@@ -376,19 +383,21 @@ export const requestService = {
     notifyListeners();
 
     // Sync update to Firestore
-    try {
-      const updateData: Partial<CitizenRequest> = {
-        status: newStatus,
-        updatedAt: updatedRequest.updatedAt,
-      };
-      if (officialResponse) {
-        updateData.officialResponse = officialResponse;
+    if (isFirebaseConfigured) {
+      try {
+        const updateData: Partial<CitizenRequest> = {
+          status: newStatus,
+          updatedAt: updatedRequest.updatedAt,
+        };
+        if (officialResponse) {
+          updateData.officialResponse = officialResponse;
+        }
+        setDoc(doc(db, 'requests', id), updateData, { merge: true }).catch(err => {
+          console.warn('Firestore status update warning:', err);
+        });
+      } catch (e) {
+        console.warn('Error queuing Firestore status update:', e);
       }
-      setDoc(doc(db, 'requests', id), updateData, { merge: true }).catch(err => {
-        console.warn('Firestore status update warning:', err);
-      });
-    } catch (e) {
-      console.warn('Error queuing Firestore status update:', e);
     }
 
     return updatedRequest;
