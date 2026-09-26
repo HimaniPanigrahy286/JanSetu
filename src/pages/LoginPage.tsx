@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { auth, db, isFirebaseConfigured } from '../firebase';
 import { authService } from '../services/authService';
 import type { Role } from '../types';
 
@@ -34,6 +34,10 @@ export default function LoginPage() {
       return;
     }
     setError('');
+    if (!isFirebaseConfigured) {
+      setSuccessMsg('Demo Mode: Password reset simulated. Use password "demo1234" to sign in.');
+      return;
+    }
     try {
       await sendPasswordResetEmail(auth, email.trim());
       setSuccessMsg('Password reset link sent to your email. Please check your inbox/spam folder.');
@@ -61,24 +65,51 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email.trim(),
-        password
-      );
+      let userCredential: any = null;
+      if (isFirebaseConfigured) {
+        try {
+          userCredential = await signInWithEmailAndPassword(
+            auth,
+            email.trim(),
+            password
+          );
+        } catch (fbErr: any) {
+          console.warn('Firebase signIn notice:', fbErr);
+        }
+      }
+
+      if (!userCredential) {
+        // Fallback: check local demo/stored accounts
+        const localUser = authService.login(email.trim(), password, role);
+        if (localUser) {
+          if (localUser.role === 'citizen') {
+            navigate('/citizen/dashboard');
+          } else {
+            navigate('/government/overview');
+          }
+          return;
+        }
+
+        if (!isFirebaseConfigured) {
+          setError('Invalid email or password. Use demo buttons below or register a new account.');
+          return;
+        }
+      }
 
       const uid = userCredential.user.uid;
       let profileData: any = null;
-      try {
-        const docRef = doc(db, 'users', uid);
-        const docSnapPromise = getDoc(docRef);
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject('timeout'), 2000));
-        const docSnap = await Promise.race([docSnapPromise, timeoutPromise]) as any;
-        if (docSnap && typeof docSnap.exists === 'function' && docSnap.exists()) {
-          profileData = docSnap.data();
+      if (isFirebaseConfigured) {
+        try {
+          const docRef = doc(db, 'users', uid);
+          const docSnapPromise = getDoc(docRef);
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject('timeout'), 2000));
+          const docSnap = await Promise.race([docSnapPromise, timeoutPromise]) as any;
+          if (docSnap && typeof docSnap.exists === 'function' && docSnap.exists()) {
+            profileData = docSnap.data();
+          }
+        } catch (err) {
+          console.warn('Could not fetch remote profile:', err);
         }
-      } catch (err) {
-        console.warn('Could not fetch remote profile:', err);
       }
 
       const cached = authService.getCurrentUser();
