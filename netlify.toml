@@ -1,0 +1,11 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  CI = "" # Prevent Netlify from treating warnings as errors
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
